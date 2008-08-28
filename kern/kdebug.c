@@ -4,8 +4,6 @@
 #include <inc/assert.h>
 
 #include <kern/kdebug.h>
-#include <kern/pmap.h>
-#include <kern/env.h>
 
 extern const struct Stab __STAB_BEGIN__[];	// Beginning of stabs table
 extern const struct Stab __STAB_END__[];	// End of stabs table
