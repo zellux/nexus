@@ -194,14 +194,15 @@ i386_vm_init(void)
 	// Map 'pages' read-only by the user at linear address UPAGES
 	// (ie. perm = PTE_U | PTE_P)
 	// Permissions:
-	//    - pages -- kernel RW, user NONE
-	//    - the read-only version mapped at UPAGES -- kernel R, user R
+	//    - the new image at UPAGES -- kernel R, user R
+	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 
 
 
 	//////////////////////////////////////////////////////////////////////
-	// Map the kernel stack (symbol name "bootstack").  The complete VA
+        // Use the physical memory that bootstack refers to as
+        // the kernel stack.  The complete VA
 	// range of the stack, [KSTACKTOP-PTSIZE, KSTACKTOP), breaks into two
 	// pieces:
 	//     * [KSTACKTOP-KSTKSIZE, KSTACKTOP) -- backed by physical memory
