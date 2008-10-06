@@ -117,7 +117,7 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
 	
-	// Handle clock and serial interrupts.
+	// Handle clock interrupts.
 	// LAB 4: Your code here.
 
 	// Handle spurious interupts
