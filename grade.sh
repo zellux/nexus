@@ -12,7 +12,7 @@ else
 	err=/dev/null
 fi
 
-pts=5
+pts=2
 timeout=30
 preservefs=n
 
@@ -156,130 +156,84 @@ runtest1 () {
 	runtest "$tag" "DEFS='-DTEST=_binary_obj_user_${prog}_start' DEFS+='-DTESTSIZE=_binary_obj_user_${prog}_size' $runtest1_defs" "$@"
 }
 
-
-
 score=0
-timeout=10
 
-runtest1 dumbfork \
-	'.00000000. new env 00001000' \
-	'.00000000. new env 00001001' \
-	'0: I am the parent!' \
-	'9: I am the parent!' \
-	'0: I am the child!' \
-	'9: I am the child!' \
-	'19: I am the child!' \
-	'.00001001. exiting gracefully' \
-	'.00001001. free env 00001001' \
-	'.00001002. exiting gracefully' \
-	'.00001002. free env 00001002'
+# Reset the file system to its original, pristine state
+resetfs() {
+	rm -f obj/fs/fs.img
+	gmake obj/fs/fs.img >$out
+}
 
-echo PART A SCORE: $score/5
 
-runtest1 faultread \
-	! 'I read ........ from location 0!' \
-	'.00001001. user fault va 00000000 ip 008.....' \
-        'TRAP frame at 0xf.......' \
-	'  trap 0x0000000e Page Fault' \
-	'  err  0x00000004' \
-	'.00001001. free env 00001001'
+resetfs
 
-runtest1 faultwrite \
-	'.00001001. user fault va 00000000 ip 008.....' \
-        'TRAP frame at 0xf.......' \
-	'  trap 0x0000000e Page Fault' \
-	'  err  0x00000006' \
-	'.00001001. free env 00001001'
+runtest1 -tag 'fs i/o [testfsipc]' testfsipc \
+	'FS can do I/O' \
+	! 'idle loop can do I/O' \
 
-runtest1 faultdie \
-	'i faulted at va deadbeef, err 6' \
-	'.00001001. exiting gracefully' \
-	'.00001001. free env 00001001' 
+quicktest 'read_block [testfsipc]' \
+	'superblock is good' \
 
-runtest1 faultalloc \
-	'fault deadbeef' \
-	'this string was faulted in at deadbeef' \
-	'fault cafebffe' \
-	'fault cafec000' \
-	'this string was faulted in at cafebffe' \
-	'.00001001. exiting gracefully' \
-	'.00001001. free env 00001001'
+quicktest 'write_block [testfsipc]' \
+	'write_block is good' \
 
-runtest1 faultallocbad \
-	'.00001001. user_mem_check assertion failure for va deadbeef' \
-	'.00001001. free env 00001001' 
+quicktest 'read_bitmap [testfsipc]' \
+	'read_bitmap is good' \
 
-runtest1 faultnostack \
-	'.00001001. user_mem_check assertion failure for va eebfff..' \
-	'.00001001. free env 00001001'
+quicktest 'alloc_block [testfsipc]' \
+	'alloc_block is good' \
 
-runtest1 faultbadhandler \
-	'.00001001. user_mem_check assertion failure for va (deadb|eebfe)...' \
-	'.00001001. free env 00001001'
+quicktest 'file_open [testfsipc]' \
+	'file_open is good' \
 
-runtest1 faultevilhandler \
-	'.00001001. user_mem_check assertion failure for va (f0100|eebfe)...' \
-	'.00001001. free env 00001001'
+quicktest 'file_get_block [testfsipc]' \
+	'file_get_block is good' \
 
-runtest1 forktree \
-	'....: I am .0.' \
-	'....: I am .1.' \
-	'....: I am .000.' \
-	'....: I am .100.' \
-	'....: I am .110.' \
-	'....: I am .111.' \
-	'....: I am .011.' \
-	'....: I am .001.' \
-	'.00001001. exiting gracefully' \
-	'.00001002. exiting gracefully' \
-	'.0000200.. exiting gracefully' \
-	'.0000200.. free env 0000200.'
+quicktest 'file_truncate [testfsipc]' \
+	'file_truncate is good' \
 
-echo PART B SCORE: $score/50
+quicktest 'file_flush [testfsipc]' \
+	'file_flush is good' \
 
-runtest1 spin \
-	'.00000000. new env 00001000' \
-	'.00000000. new env 00001001' \
-	'I am the parent.  Forking the child...' \
-	'.00001001. new env 00001002' \
-	'I am the parent.  Running the child...' \
-	'I am the child.  Spinning...' \
-	'I am the parent.  Killing the child...' \
-	'.00001001. destroying 00001002' \
-	'.00001001. free env 00001002' \
-	'.00001001. exiting gracefully' \
-	'.00001001. free env 00001001'
+quicktest 'file rewrite [testfsipc]' \
+	'file rewrite is good' \
 
-runtest1 pingpong \
-	'.00000000. new env 00001000' \
-	'.00000000. new env 00001001' \
-	'.00001001. new env 00001002' \
-	'send 0 from 1001 to 1002' \
-	'1002 got 0 from 1001' \
-	'1001 got 1 from 1002' \
-	'1002 got 8 from 1001' \
-	'1001 got 9 from 1002' \
-	'1002 got 10 from 1001' \
-	'.00001001. exiting gracefully' \
-	'.00001001. free env 00001001' \
-	'.00001002. exiting gracefully' \
-	'.00001002. free env 00001002' \
+quicktest 'serv_* [testfsipc]' \
+	'serve_open is good' \
+	'serve_map is good' \
+	'serve_close is good' \
+	'stale fileid is good' \
 
-runtest1 primes \
-	'.00000000. new env 00001000' \
-	'.00000000. new env 00001001' \
-	'.00001001. new env 00001002' \
-	'2 .00001002. new env 00001003' \
-	'3 .00001003. new env 00001004' \
-	'5 .00001004. new env 00001005' \
-	'7 .00001005. new env 00001006' \
-	'11 .00001006. new env 00001007' 
+pts=5
+runtest1 -tag 'motd display [writemotd]' writemotd \
+	'OLD MOTD' \
+	'This is /motd, the message of the day.' \
+	'NEW MOTD' \
+	'This is the NEW message of the day!' \
 
-echo PART C SCORE: $score/65
+preservefs=y
+runtest1 -tag 'motd change [writemotd]' writemotd \
+	'OLD MOTD' \
+	'This is the NEW message of the day!' \
+	'NEW MOTD' \
+	! 'This is /motd, the message of the day.' \
 
-if [ $score -lt 65 ]; then
+pts=8
+preservefs=n
+runtest1 -tag 'spawn via icode [icode]' icode \
+	'icode: read /motd' \
+	'This is /motd, the message of the day.' \
+	'icode: spawn /init' \
+	'init: running' \
+	'init: data seems okay' \
+	'icode: exiting' \
+	'init: bss seems okay' \
+	"init: args: 'init' 'initarg1' 'initarg2'" \
+	'init: exiting' \
+
+echo LAB 5 SCORE: $score/40
+
+if [ $score -lt 40 ]; then
     exit 1
 fi
-
-
 
