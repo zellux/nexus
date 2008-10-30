@@ -58,7 +58,7 @@ fsipc_map(int fileid, off_t offset, void *dstva)
 	// Send request to file server with fsipc.
 	// Check the return value from the IPC and 
 	// make sure that the permissions on the 
-	// returned page are PTE_W | PTE_SHARE.
+	// returned page are at least PTE_U and PTE_P.
 
 	// LAB 5: Your code here.
 	panic("fsipc_map not implemented");
