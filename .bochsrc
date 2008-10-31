@@ -270,6 +270,7 @@ ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 #   ata3-slave:  type=cdrom, path=iso.sample, status=inserted
 #=======================================================================
 ata0-master: type=disk, mode=flat, path="./obj/kern/bochs.img", cylinders=100, heads=10, spt=10
+ata0-slave: type=disk, mode=flat, path="./obj/fs/fs.img", cylinders=128, heads=8, spt=8
 
 #=======================================================================
 # BOOT:
