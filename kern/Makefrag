@@ -27,6 +27,9 @@ KERN_SRCFILES :=	kern/entry.S \
 			kern/sched.c \
 			kern/syscall.c \
 			kern/kdebug.c \
+			kern/time.c \
+			kern/dev/pci.c \
+			kern/dev/e100.c \
 			lib/printfmt.c \
 			lib/readline.c \
 			lib/string.c
@@ -42,7 +45,12 @@ KERN_BINFILES :=	user/idle \
 			user/testfsipc \
 			user/writemotd \
 			user/icode \
-			fs/fs
+			user/testtime \
+			user/tcpecho \
+			user/tcpsrv \
+			user/httpd \
+			fs/fs \
+			net/ns
 
 KERN_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES := $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))
@@ -50,8 +58,15 @@ KERN_OBJFILES := $(patsubst $(OBJDIR)/lib/%, $(OBJDIR)/kern/%, $(KERN_OBJFILES))
 
 KERN_BINFILES := $(patsubst %, $(OBJDIR)/%, $(KERN_BINFILES))
 
+KERN_CFLAGS += -I$(TOP)/kern
+
 # How to build kernel object files
 $(OBJDIR)/kern/%.o: kern/%.c
+	@echo + cc $<
+	@mkdir -p $(@D)
+	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/kern/dev/%.o: kern/dev/%.c
 	@echo + cc $<
 	@mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<

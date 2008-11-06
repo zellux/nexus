@@ -12,11 +12,14 @@
 #include <kern/trap.h>
 #include <kern/sched.h>
 #include <kern/picirq.h>
+#include <kern/time.h>
+#include <dev/pci.h>
 
 
 void
 i386_init(void)
 {
+	int pci_enabled = 0;
 	extern char edata[], end[];
 
 	// Before doing anything else, complete the ELF loading process.
@@ -41,12 +44,18 @@ i386_init(void)
 	// Lab 4 multitasking initialization functions
 	pic_init();
 	kclock_init();
+	time_init();
+	pci_enabled = pci_init();
 
 	// Should always have an idle process as first one.
 	ENV_CREATE(user_idle);
 
 	// Start fs.
 	ENV_CREATE(fs_fs);
+
+	// Start the network server.
+	if (pci_enabled)
+		ENV_CREATE(net_ns);
 
 	// Start init
 #if defined(TEST)

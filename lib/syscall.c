@@ -117,3 +117,9 @@ sys_ipc_recv(void *dstva)
 	return syscall(SYS_ipc_recv, 1, (uint32_t)dstva, 0, 0, 0, 0);
 }
 
+unsigned
+sys_time_msec()
+{
+	return (unsigned) syscall(SYS_time_msec, 0, 0, 0, 0, 0, 0);
+}
+

@@ -72,6 +72,10 @@ PERL	:= perl
 CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O1 -fno-builtin -I$(TOP) -MD 
 CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gstabs -m32
 
+CFLAGS += -I$(TOP)/net/lwip/include
+CFLAGS += -I$(TOP)/net/lwip/include/ipv4
+CFLAGS += -I$(TOP)/net/lwip/jos
+
 # Add -fno-stack-protector if the option exists.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
@@ -97,7 +101,13 @@ all:
 
 # make it so that no intermediate .o files are ever deleted
 .PRECIOUS: %.o $(OBJDIR)/boot/%.o $(OBJDIR)/kern/%.o \
-	$(OBJDIR)/lib/%.o $(OBJDIR)/fs/%.o $(OBJDIR)/user/%.o
+	$(OBJDIR)/lib/%.o $(OBJDIR)/fs/%.o $(OBJDIR)/user/%.o \
+	$(OBJDIR)/net/drivers/%.o \
+	$(OBJDIR)/net/lwip/%.o $(OBJDIR)/net/lwip/api/%.o \
+	$(OBJDIR)/net/lwip/arch/%.o $(OBJDIR)/net/lwip/core/%.o \
+	$(OBJDIR)/net/lwip/core/ipv4/%.o $(OBJDIR)/net/lwip/netif/%.o \
+	$(OBJDIR)/net/lwip/jos/%.o $(OBJDIR)/net/lwip/jos/arch/%.o \
+	$(OBJDIR)/net/lwip/jos/jif/%.o
 
 KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gstabs
 USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
@@ -111,6 +121,7 @@ include kern/Makefrag
 include lib/Makefrag
 include user/Makefrag
 include fs/Makefrag
+include net/Makefrag
 
 
 IMAGES = $(OBJDIR)/kern/bochs.img $(OBJDIR)/fs/fs.img
@@ -150,6 +161,12 @@ xrun-%:
 	$(V)rm -f $(OBJDIR)/kern/init.o $(IMAGES)
 	$(V)$(MAKE) "DEFS=-DTEST=_binary_obj_user_$*_start -DTESTSIZE=_binary_obj_user_$*_size" $(IMAGES)
 	bochs -q
+
+TAGS:
+	etags */*.[chS] */*/*.[chS] */*/*/*.[chS] */*/*/*/*.[chS] */*/*/*/*/*.[chS]
+
+tags:
+	ctags */*.[chS] */*/*.[chS] */*/*/*.[chS] */*/*/*/*.[chS] */*/*/*/*/*.[chS]
 
 # This magic automatically generates makefile dependencies
 # for header files included from C source files we compile,

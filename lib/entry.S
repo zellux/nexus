@@ -4,6 +4,7 @@
 .data
 	// define page-aligned fsipcbuf for fsipc.c
 	// ... and fdtab for file.c
+	// ... and page-aligned nsipcbuf for nsipc.c
 	.p2align PGSHIFT
 	.globl fsipcbuf
 fsipcbuf:
@@ -12,6 +13,8 @@ fsipcbuf:
 fdtab:
 	.space PGSIZE
 	.globl nsipcbuf
+nsipcbuf:
+	.space PGSIZE
 
 
 // Define the global symbols 'envs', 'pages', 'vpt', and 'vpd'

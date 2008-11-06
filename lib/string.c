@@ -200,7 +200,7 @@ memmove(void *dst, const void *src, size_t n)
 /* sigh - gcc emits references to this for structure assignments! */
 /* it is *not* prototyped in inc/string.h - do not use directly. */
 void *
-memcpy(void *dst, void *src, size_t n)
+memcpy(void *dst, const void *src, size_t n)
 {
 	return memmove(dst, src, n);
 }

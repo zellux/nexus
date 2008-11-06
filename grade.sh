@@ -156,6 +156,128 @@ runtest1 () {
 	runtest "$tag" "DEFS='-DTEST=_binary_obj_user_${prog}_start' DEFS+='-DTESTSIZE=_binary_obj_user_${prog}_size' $runtest1_defs" "$@"
 }
 
+qemu_test_httpd() {
+	pts=5
+
+	echo ""
+
+	perl -e "print '    wget localhost:8080/: '"
+	if wget -o wget.log -O /dev/null localhost:8080/; then
+		echo "WRONG, got back data";
+	else
+		if egrep "ERROR 404" wget.log >/dev/null; then
+			score=`expr $pts + $score`
+			echo "OK";
+		else
+			echo "WRONG, did not get 404 error";
+		fi
+	fi
+
+	perl -e "print '    wget localhost:8080/index.html: '"
+	if wget -o /dev/null -O qemu.out localhost:8080/index.html; then
+		if diff qemu.out fs/index.html > /dev/null; then
+			score=`expr $pts + $score`
+			echo "OK";
+		else
+			echo "WRONG, returned data does not match index.html";
+		fi
+	else
+		echo "WRONG, got error";
+	fi
+
+	perl -e "print '    wget localhost:8080/random_file.txt: '"
+	if wget -o wget.log -O /dev/null localhost:8080/random_file.txt; then
+		echo "WRONG, got back data";
+	else
+		if egrep "ERROR 404" wget.log >/dev/null; then
+			score=`expr $pts + $score`
+			echo "OK";
+		else
+			echo "WRONG, did not get 404 error";
+		fi
+	fi
+
+	kill $qemu_pid
+	wait
+
+	t1=`date +%s.%N 2>/dev/null`
+	time=`echo "scale=1; ($t1-$t0)/1" | sed 's/.N/.0/g' | bc 2>/dev/null`
+	time="(${time}s)"
+}
+
+qemu_test_tcpsrv() {
+	str="$t0: network server works"
+	echo $str | nc -q 3 localhost 4242 > qemu.out
+
+	kill $qemu_pid
+	wait
+
+	t1=`date +%s.%N 2>/dev/null`
+	time=`echo "scale=1; ($t1-$t0)/1" | sed 's/.N/.0/g' | bc 2>/dev/null`
+	time="(${time}s)"
+
+	if egrep "^$str\$" qemu.out > /dev/null
+	then
+		score=`expr $pts + $score`
+		echo OK $time
+	else
+		echo WRONG $time
+	fi
+}
+
+# Usage: runqemu <tagname> <defs> <strings...>
+runqemu() {
+	perl -e "print '$1: '"
+	rm -f obj/kern/init.o obj/kern/kernel obj/kern/bochs.img 
+	[ "$preservefs" = y ] || rm -f obj/fs/fs.img
+	if $verbose
+	then
+		echo "gmake $2... "
+	fi
+	gmake $2 >$out
+	if [ $? -ne 0 ]
+	then
+		echo gmake $2 failed 
+		exit 1
+	fi
+
+	t0=`date +%s.%N 2>/dev/null`
+	qemu -hda obj/kern/bochs.img -hdb obj/fs/fs.img \
+	     -net user -net nic,model=i82559er -parallel /dev/stdout \
+	     -redir tcp:4242::10000 -redir tcp:8080::80 \
+	     -nographic -pidfile qemu.pid -pcap slirp.cap 2>/dev/null&
+
+	sleep 3 # wait for qemu to start up
+
+	qemu_pid=`cat qemu.pid`
+	rm -f qemu.pid
+}
+
+# Usage: runtestq [-tag <tagname>] <progname> [-Ddef...] STRINGS...
+runtestq() {
+	if [ $1 = -tag ]
+	then
+		shift
+		tag=$1
+		prog=$2
+		shift
+		shift
+	else
+		tag=$1
+		prog=$1
+		shift
+	fi
+	testnet_defs=
+	while expr "x$1" : 'x-D.*' >/dev/null; do
+		testnet_defs="DEFS+='$1' $testnet_defs"
+		shift
+	done
+	runqemu "$tag" "DEFS='-DTEST=_binary_obj_user_${prog}_start' DEFS+='-DTESTSIZE=_binary_obj_user_${prog}_size' $testnet_defs" "$@"
+
+	# now run the actuall test
+	qemu_test_${prog}
+}
+
 score=0
 
 # Reset the file system to its original, pristine state
@@ -231,9 +353,25 @@ runtest1 -tag 'spawn via icode [icode]' icode \
 	"init: args: 'init' 'initarg1' 'initarg2'" \
 	'init: exiting' \
 
-echo LAB 5 SCORE: $score/40
+echo PART A SCORE: $score/40
 
-if [ $score -lt 40 ]; then
+partascore=$score
+
+
+score=0
+pts=45
+preservefs=y
+runtestq -tag 'tcp echo server [tcpsrv]' tcpsrv
+
+#pts=15 # points are allocated in the test code
+preservefs=y
+runtestq -tag 'web server [httpd]' httpd
+
+echo PART B SCORE: $score/60
+
+partbscore=$score
+
+if [ $partascore -lt 40 -o $partbscore -lt 60 ]; then
     exit 1
 fi
 

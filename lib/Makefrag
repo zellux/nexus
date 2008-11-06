@@ -21,8 +21,15 @@ LIB_SRCFILES :=		$(LIB_SRCFILES) \
 			lib/file.c \
 			lib/fprintf.c \
 			lib/fsipc.c \
+			lib/nsipc.c \
 			lib/pageref.c \
 			lib/spawn.c
+
+LIB_SRCFILES :=		$(LIB_SRCFILES) \
+			lib/malloc.c
+
+LIB_SRCFILES :=		$(LIB_SRCFILES) \
+			lib/sockets.c
 
 LIB_OBJFILES := $(patsubst lib/%.c, $(OBJDIR)/lib/%.o, $(LIB_SRCFILES))
 LIB_OBJFILES := $(patsubst lib/%.S, $(OBJDIR)/lib/%.o, $(LIB_OBJFILES))

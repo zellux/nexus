@@ -11,6 +11,7 @@
 #include <kern/syscall.h>
 #include <kern/console.h>
 #include <kern/sched.h>
+#include <kern/time.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -276,6 +277,11 @@ sys_ipc_recv(void *dstva)
 	// LAB 4: Your code here.
 	panic("sys_ipc_recv not implemented");
 	return 0;
+}
+
+static int
+sys_time_msec() {
+	return (int) time_msec();
 }
 
 
