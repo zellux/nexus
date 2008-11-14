@@ -22,13 +22,17 @@ echo_n () {
 	awk 'BEGIN { printf("'"$*"'"); }' </dev/null
 }
 
+rand() {
+	perl -e "my \$r = int(1024 + rand() * (65535 - 1024));print \"\$r\\n\";"
+}
+
 qemu_test_httpd() {
 	pts=5
 
 	echo ""
 
-	perl -e "print '    wget localhost:8080/: '"
-	if wget -o wget.log -O /dev/null localhost:8080/; then
+	perl -e "print '    wget localhost:$http_port/: '"
+	if wget -o wget.log -O /dev/null localhost:$http_port/; then
 		echo "WRONG, got back data";
 	else
 		if egrep "ERROR 404" wget.log >/dev/null; then
@@ -39,8 +43,8 @@ qemu_test_httpd() {
 		fi
 	fi
 
-	perl -e "print '    wget localhost:8080/index.html: '"
-	if wget -o /dev/null -O qemu.out localhost:8080/index.html; then
+	perl -e "print '    wget localhost:$http_port/index.html: '"
+	if wget -o /dev/null -O qemu.out localhost:$http_port/index.html; then
 		if diff qemu.out fs/index.html > /dev/null; then
 			score=`expr $pts + $score`
 			echo "OK";
@@ -51,8 +55,8 @@ qemu_test_httpd() {
 		echo "WRONG, got error";
 	fi
 
-	perl -e "print '    wget localhost:8080/random_file.txt: '"
-	if wget -o wget.log -O /dev/null localhost:8080/random_file.txt; then
+	perl -e "print '    wget localhost:$http_port/random_file.txt: '"
+	if wget -o wget.log -O /dev/null localhost:$http_port/random_file.txt; then
 		echo "WRONG, got back data";
 	else
 		if egrep "ERROR 404" wget.log >/dev/null; then
@@ -64,7 +68,7 @@ qemu_test_httpd() {
 	fi
 
 	kill $qemu_pid
-	wait
+	wait 2> /dev/null
 
 	t1=`date +%s.%N 2>/dev/null`
 	time=`echo "scale=1; ($t1-$t0)/1" | sed 's/.N/.0/g' | bc 2>/dev/null`
@@ -73,10 +77,10 @@ qemu_test_httpd() {
 
 qemu_test_tcpsrv() {
 	str="$t0: network server works"
-	echo $str | nc -q 3 localhost 4242 > qemu.out
+	echo $str | nc -q 3 localhost $tcpsrv_port > qemu.out
 
 	kill $qemu_pid
-	wait
+	wait 2> /dev/null
 
 	t1=`date +%s.%N 2>/dev/null`
 	time=`echo "scale=1; ($t1-$t0)/1" | sed 's/.N/.0/g' | bc 2>/dev/null`
@@ -110,7 +114,7 @@ runqemu() {
 	t0=`date +%s.%N 2>/dev/null`
 	qemu -hda obj/kern/bochs.img -hdb obj/fs/fs.img \
 	     -net user -net nic,model=i82559er -parallel /dev/stdout \
-	     -redir tcp:4242::10000 -redir tcp:8080::80 \
+	     -redir tcp:$tcpsrv_port::10000 -redir tcp:$http_port::80 \
 	     -nographic -pidfile qemu.pid -pcap slirp.cap 2>/dev/null&
 
 	sleep 3 # wait for qemu to start up
@@ -151,6 +155,11 @@ resetfs() {
 	rm -f obj/fs/fs.img
 	gmake obj/fs/fs.img >$out
 }
+
+http_port=`rand`
+tcpsrv_port=`rand`
+echo "using http port: $http_port"
+echo "using echo server port: $tcpsrv_port"
 
 score=0
 pts=85
