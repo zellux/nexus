@@ -183,7 +183,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
         rpos = rline;
         stab_binsearch(stabs, &lpos, &rpos, N_SLINE, addr);
         if (lpos <= rpos) {
-            info->eip_line = stabs[lpos].n_value;
+            info->eip_line = stabs[lpos].n_desc;
         } else {
             cprintf("lpos=%x rpos=%x\n", lpos, rpos);
             return -1;
