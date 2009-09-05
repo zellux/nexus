@@ -53,7 +53,7 @@ runbochs () {
 
 
 
-gmake
+make
 runbochs
 
 score=0

@@ -30,11 +30,8 @@ i386_init(void)
 	i386_detect_memory();
 	i386_vm_init();
 
-
-
-
-
-
+	// Test the stack backtrace function (lab 1 only)
+	test_backtrace(5);
 
 	// Drop into the kernel monitor.
 	while (1)
