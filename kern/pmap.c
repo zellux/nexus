@@ -8,6 +8,7 @@
 
 #include <kern/pmap.h>
 #include <kern/kclock.h>
+#include <kern/kdebug.h>
 
 // These variables are set by i386_detect_memory()
 static physaddr_t maxpa;	// Maximum physical address
@@ -118,11 +119,15 @@ boot_alloc(uint32_t n, uint32_t align)
 
 	// LAB 2: Your code here:
 	//	Step 1: round boot_freemem up to be aligned properly
+    boot_freemem = ROUNDUP(boot_freemem, align);
+    
 	//	Step 2: save current value of boot_freemem as allocated chunk
+    
 	//	Step 3: increase boot_freemem to record allocation
+    boot_freemem += n;
+    
 	//	Step 4: return allocated chunk
-
-	return NULL;
+    return (void *) (boot_freemem - n);
 }
 
 // Set up a two-level page table:
@@ -143,9 +148,6 @@ i386_vm_init(void)
 	pde_t* pgdir;
 	uint32_t cr0;
 	size_t n;
-
-	// Delete this line:
-	panic("i386_vm_init: This function is not finished\n");
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -175,6 +177,8 @@ i386_vm_init(void)
 	// You must allocate the array yourself.
 	// Your code goes here: 
 
+    pages = (struct Page *) boot_freemem;
+    boot_freemem += sizeof(struct Page) * npage;
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -432,11 +436,24 @@ page_init(void)
 	//
 	// Change the code to reflect this.
 	int i;
+    physaddr_t addr;
+    struct Page* page;
+    
 	LIST_INIT(&page_free_list);
 	for (i = 0; i < npage; i++) {
 		pages[i].pp_ref = 0;
 		LIST_INSERT_HEAD(&page_free_list, &pages[i], pp_link);
 	}
+
+    for (addr = 0; addr < (physaddr_t) PADDR(boot_freemem); addr += PGSIZE) {
+        page = pa2page(addr);
+        LIST_REMOVE(page, pp_link);
+    }
+
+    for (addr = IOPHYSMEM; addr < EXTPHYSMEM; addr += PGSIZE) {
+        page = pa2page(addr);
+        LIST_REMOVE(page, pp_link);
+    }        
 }
 
 //
@@ -467,8 +484,16 @@ page_initpp(struct Page *pp)
 int
 page_alloc(struct Page **pp_store)
 {
-	// Fill this function in
-	return -E_NO_MEM;
+    struct Page *page;
+
+    if (LIST_EMPTY(&page_free_list))
+        return -E_NO_MEM;
+
+    page = LIST_FIRST(&page_free_list);
+    LIST_REMOVE(page, pp_link);
+    page_initpp(page);
+    *pp_store = page;
+    return 0;
 }
 
 //
@@ -478,7 +503,12 @@ page_alloc(struct Page **pp_store)
 void
 page_free(struct Page *pp)
 {
-	// Fill this function in
+    assert(pp != NULL);
+
+    if (pp->pp_ref > 0) {
+        dprintk("page_free: pp->pp_ref of page %p is %d\n", page2pa(pp), pp->pp_ref);
+    }
+    LIST_INSERT_HEAD(&page_free_list, pp, pp_link);
 }
 
 //
