@@ -157,6 +157,8 @@ runtest1 () {
 }
 
 
+make
+runbochs
 
 score=0
 

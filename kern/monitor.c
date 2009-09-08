@@ -53,14 +53,36 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 	cprintf("  edata  %08x (virt)  %08x (phys)\n", edata, edata - KERNBASE);
 	cprintf("  end    %08x (virt)  %08x (phys)\n", end, end - KERNBASE);
 	cprintf("Kernel executable memory footprint: %dKB\n",
-		(end-_start+1023)/1024);
+            (end-_start+1023)/1024);
 	return 0;
 }
 
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
+    long ebp = read_ebp();
+    long eip = read_eip();
+    long *ptr;
+    char fname[256];
+    struct Eipdebuginfo info;
+    
+    cprintf("Stack backtrace:\n");
+
+    while (ebp) {
+        ptr = (long *) ebp;
+        cprintf("  ebp %8.0x  eip %8.0x  args %8.0x %8.0x %8.0x %8.0x %8.0x\n",
+                ebp, eip, *(ptr+2), *(ptr+3), *(ptr+4), *(ptr+5), *(ptr+6));
+        if (debuginfo_eip(eip, &info)) {
+            cprintf("      error when resolving symbols.\n");
+        }
+        memmove(fname, info.eip_fn_name, info.eip_fn_namelen);
+        fname[info.eip_fn_namelen] = 0;
+        cprintf("       %s:%d: %s+%d\n", info.eip_file, info.eip_line, fname,
+                eip - info.eip_fn_addr);
+
+        eip = *(ptr + 1);
+        ebp = *ptr;
+    }
 	return 0;
 }
 
@@ -121,8 +143,11 @@ monitor(struct Trapframe *tf)
 	if (tf != NULL)
 		print_trapframe(tf);
 
+    mon_backtrace(0, NULL, tf);
+
 	while (1) {
 		buf = readline("K> ");
+        cprintf("%s\n", buf);
 		if (buf != NULL)
 			if (runcmd(buf, tf) < 0)
 				break;

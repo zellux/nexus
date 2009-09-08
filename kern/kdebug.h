@@ -17,4 +17,6 @@ struct Eipdebuginfo {
 
 int debuginfo_eip(uintptr_t eip, struct Eipdebuginfo *info);
 
+#define dprintk(_f, _a...) cprintf(_f, ## _a)
+
 #endif
