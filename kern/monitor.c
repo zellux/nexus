@@ -143,6 +143,7 @@ monitor(struct Trapframe *tf)
 
 	while (1) {
 		buf = readline("K> ");
+        cprintf("%s\n", buf);
 		if (buf != NULL)
 			if (runcmd(buf, tf) < 0)
 				break;

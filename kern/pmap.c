@@ -188,7 +188,7 @@ i386_vm_init(void)
 	// particular, we can now map memory using boot_map_segment or page_insert
 	page_init();
 
-        check_page_alloc();
+    check_page_alloc();
 
 	page_check();
 
@@ -202,18 +202,18 @@ i386_vm_init(void)
 	//    - the new image at UPAGES -- kernel R, user R
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
-
-
-
+    boot_map_segment(pgdir, UPAGES, npage * sizeof(struct Page), PADDR(pages), PTE_U);
+    
 	//////////////////////////////////////////////////////////////////////
-        // Use the physical memory that bootstack refers to as
-        // the kernel stack.  The complete VA
+    // Use the physical memory that bootstack refers to as
+    // the kernel stack.  The complete VA
 	// range of the stack, [KSTACKTOP-PTSIZE, KSTACKTOP), breaks into two
 	// pieces:
 	//     * [KSTACKTOP-KSTKSIZE, KSTACKTOP) -- backed by physical memory
 	//     * [KSTACKTOP-PTSIZE, KSTACKTOP-KSTKSIZE) -- not backed => faults
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
+    boot_map_segment(pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE. 
@@ -222,7 +222,8 @@ i386_vm_init(void)
 	// We might not have 2^32 - KERNBASE bytes of physical memory, but
 	// we just set up the amapping anyway.
 	// Permissions: kernel RW, user NONE
-	// Your code goes here: 
+	// Your code goes here:
+    boot_map_segment(pgdir, KERNBASE, 0xFFFFFFF, 0, PTE_W|PTE_P);
 
 	// Check that the initial page directory has been set up correctly.
 	check_boot_pgdir();
@@ -357,8 +358,10 @@ check_boot_pgdir(void)
 
 	// check pages array
 	n = ROUNDUP(npage*sizeof(struct Page), PGSIZE);
-	for (i = 0; i < n; i += PGSIZE)
+	for (i = 0; i < n; i += PGSIZE) {
+        /* dprintk("%d/%d: va %p - pa %p\n", i, n, UPAGES+i, check_va2pa(pgdir, UPAGES + i)); */
 		assert(check_va2pa(pgdir, UPAGES + i) == PADDR(pages) + i);
+    }
 	
 
 	// check phys mem
@@ -558,7 +561,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
     pte = (pte_t *) KADDR(PTE_ADDR(pgdir[pdx]));
     if (pgdir[pdx] == 0) {
         if (!create) return NULL;
-        dprintk("pgdir_walk: page table not exists, create one.\n");
+        /* dprintk("pgdir_walk: page table not exists, create one for va %p.\n", va); */
         if (page_alloc(&page)) {
             dprintk("pgdir_walk: cannot allocate new page.\n");
             return NULL;
@@ -630,10 +633,12 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int per
 {
     uintptr_t addr;
     pte_t *pte;
-    
+
+    dprintk("boot_map_segment: mapping v[%p, %p) to p[%p, %p)\n", la, la+size, pa, pa+size);
     for (addr = la; addr < la + size; addr += PGSIZE) {
         pte = pgdir_walk(pgdir, (const void *) addr, 1);
-        *pte = ((pa + la - addr) & ~0xFFF) | PTE_P | perm;
+        *pte = ((pa + addr - la) & ~0xFFF) | PTE_P | perm;
+        if (addr + PGSIZE < addr) break;
     }
 }
 
