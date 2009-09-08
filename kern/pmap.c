@@ -89,6 +89,7 @@ static void check_boot_pgdir(void);
 static void check_page_alloc();
 static void page_check(void);
 static void boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int perm);
+static void dump_va_mapping(pde_t *pgdir, uintptr_t va);
 
 //
 // A simple physical memory allocator, used only a few times
@@ -542,8 +543,33 @@ page_decref(struct Page* pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
-	return NULL;
+    struct Page *page;
+    physaddr_t pgd = PTE_ADDR(*pgdir);
+    int pdx, ptx;
+    pte_t *pte;
+    
+    if (!pgdir) {
+        dprintk("pgdir_walk: pgdir is NULL.\n");
+        return NULL;
+    }
+
+    pdx = PDX(va);
+    ptx = PTX(va);
+    pte = (pte_t *) KADDR(PTE_ADDR(pgdir[pdx]));
+    if (pgdir[pdx] == 0) {
+        if (!create) return NULL;
+        dprintk("pgdir_walk: page table not exists, create one.\n");
+        if (page_alloc(&page)) {
+            dprintk("pgdir_walk: cannot allocate new page.\n");
+            return NULL;
+        }
+        memset(KADDR(page2pa(page)), 0, PGSIZE);
+        page->pp_ref = 1;
+        pte = (pte_t *) KADDR(page2pa(page));
+        pgdir[pdx] = page2pa(page) | PTE_USER;
+    }
+
+    return &pte[ptx];
 }
 
 //
@@ -568,7 +594,24 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 int
 page_insert(pde_t *pgdir, struct Page *pp, void *va, int perm) 
 {
-	// Fill this function in
+    pte_t *pte;
+
+    dump_va_mapping(pgdir, (uintptr_t) va);
+    pte = pgdir_walk(pgdir, va, 1);
+    if (pte != 0 && *pte != 0 && pa2page(PTE_ADDR(*pte)) != pp) {
+        dprintk("page_insert: pte=%p, already mapped, remove first.\n", *pte);
+        page_remove(pgdir, va);
+        tlb_invalidate(pgdir, va);
+    }
+
+    if (!pte)
+        return -E_NO_MEM;
+    if (pa2page(PTE_ADDR(*pte)) != pp) 
+        pp->pp_ref ++;
+    *pte = (page2pa(pp) & ~0xFFF) | perm | PTE_P;
+    dprintk("page_insert: pgdir=%p, va=%p\n", pgdir, va);
+    dprintk("             pte ptr=%p, pte val=%p, pp_ref=%d\n", pte, *pte, pp->pp_ref);
+
 	return 0;
 }
 
@@ -585,7 +628,13 @@ page_insert(pde_t *pgdir, struct Page *pp, void *va, int perm)
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+    uintptr_t addr;
+    pte_t *pte;
+    
+    for (addr = la; addr < la + size; addr += PGSIZE) {
+        pte = pgdir_walk(pgdir, (const void *) addr, 1);
+        *pte = ((pa + la - addr) & ~0xFFF) | PTE_P | perm;
+    }
 }
 
 //
@@ -601,8 +650,17 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int per
 struct Page *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-	// Fill this function in
-	return NULL;
+    pte_t *pte;
+
+    pte = pgdir_walk(pgdir, va, 0);
+    if (!pte) {
+        dprintk("page_lookup: cannot find page info for va %p\n", va);
+        return NULL;
+    }
+
+    if (pte_store)
+        *pte_store = pte;
+    return pa2page(PTE_ADDR(*pte));
 }
 
 //
@@ -623,7 +681,16 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// Fill this function in
+    struct Page *pp;
+    pte_t *pte;
+
+    pp = page_lookup(pgdir, va, &pte);
+    dprintk("pp=%p\n", pp);
+    if (!pp)
+        return;
+    page_decref(pp);
+    *pte = 0;
+    tlb_invalidate(pgdir, va);
 }
 
 //
@@ -636,6 +703,31 @@ tlb_invalidate(pde_t *pgdir, void *va)
 	// Flush the entry only if we're modifying the current address space.
 	// For now, there is only one address space, so always invalidate.
 	invlpg(va);
+}
+
+/** 
+ * dump information about virtual-to-physical address mapping
+ * 
+ * @param pgdir 
+ * @param va 
+ */
+void
+dump_va_mapping(pde_t *pgdir, uintptr_t va)
+{
+	pte_t *p;
+
+    cprintf("dump: pgdir=%p, va=%p\n", pgdir, va);
+	pgdir = &pgdir[PDX(va)];
+	if (!(*pgdir & PTE_P)) {
+        cprintf("      page directory entry not present.\n");
+		return;
+    }
+	p = (pte_t*) KADDR(PTE_ADDR(*pgdir));
+	if (!(p[PTX(va)] & PTE_P)) {
+        cprintf("      page table entry not present.\n");
+		return;
+    }
+	cprintf("      pde=%p, pte=%p\n", *pgdir, p[PTX(va)]);
 }
 
 // check page_insert, page_remove, &c
@@ -653,6 +745,7 @@ page_check(void)
 	assert(page_alloc(&pp0) == 0);
 	assert(page_alloc(&pp1) == 0);
 	assert(page_alloc(&pp2) == 0);
+    dprintk("pp0=%p, pp1=%p, pp2=%p\n", pp0, pp1, pp2);
 
 	assert(pp0);
 	assert(pp1 && pp1 != pp0);
