@@ -2,6 +2,9 @@
 #define JOS_KERN_KDEBUG_H
 
 #include <inc/types.h>
+#include <inc/memlayout.h>
+
+struct Trapframe;
 
 // Debug information about a particular instruction pointer
 struct Eipdebuginfo {
@@ -15,8 +18,12 @@ struct Eipdebuginfo {
 	int eip_fn_narg;		// Number of function arguments
 };
 
-int debuginfo_eip(uintptr_t eip, struct Eipdebuginfo *info);
+extern int debuginfo_eip(uintptr_t eip, struct Eipdebuginfo *info);
+extern void dump_tf(struct Trapframe *tf);
+extern void dump_va_mapping(pde_t *pgdir, uintptr_t va);
 
 #define dprintk(_f, _a...) cprintf(_f, ## _a)
+
+#define dprintfunc() dprintk("%s [%d]\n", __FUNCTION__, __LINE__)
 
 #endif

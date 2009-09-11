@@ -90,7 +90,6 @@ static void check_boot_pgdir(void);
 static void check_page_alloc();
 static void page_check(void);
 static void boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int perm);
-static void dump_va_mapping(pde_t *pgdir, uintptr_t va);
 
 //
 // A simple physical memory allocator, used only a few times
@@ -185,6 +184,8 @@ i386_vm_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
+    envs = (struct Env *) boot_freemem;
+    boot_freemem += sizeof(struct Env) * NENV;
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -207,15 +208,15 @@ i386_vm_init(void)
 	//    - the new image at UPAGES -- kernel R, user R
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
-
+    boot_map_segment(pgdir, UPAGES, npage * sizeof(struct Page), PADDR(pages), PTE_U);
+    
 	//////////////////////////////////////////////////////////////////////
 	// Map the 'envs' array read-only by the user at linear address UENVS
 	// (ie. perm = PTE_U | PTE_P).
 	// Permissions:
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
-
-    boot_map_segment(pgdir, UPAGES, npage * sizeof(struct Page), PADDR(pages), PTE_U);
+    boot_map_segment(pgdir, UENVS, NENV * sizeof(struct Env), PADDR(envs), PTE_U);
     
 	//////////////////////////////////////////////////////////////////////
     // Use the physical memory that bootstack refers to as
@@ -508,8 +509,10 @@ page_alloc(struct Page **pp_store)
 {
     struct Page *page;
 
-    if (LIST_EMPTY(&page_free_list))
+    if (LIST_EMPTY(&page_free_list)) {
+        dprintk("page_alloc: no free memory.\n");
         return -E_NO_MEM;
+    }
 
     page = LIST_FIRST(&page_free_list);
     LIST_REMOVE(page, pp_link);
@@ -728,7 +731,6 @@ tlb_invalidate(pde_t *pgdir, void *va)
 	invlpg(va);
 }
 
-<<<<<<< HEAD
 static uintptr_t user_mem_check_addr;
 
 //
@@ -771,31 +773,6 @@ user_mem_assert(struct Env *env, const void *va, size_t len, int perm)
 			"va %08x\n", curenv->env_id, user_mem_check_addr);
 		env_destroy(env);	// may not return
 	}
-=======
-/** 
- * dump information about virtual-to-physical address mapping
- * 
- * @param pgdir 
- * @param va 
- */
-void
-dump_va_mapping(pde_t *pgdir, uintptr_t va)
-{
-	pte_t *p;
-
-    cprintf("dump: pgdir=%p, va=%p\n", pgdir, va);
-	pgdir = &pgdir[PDX(va)];
-	if (!(*pgdir & PTE_P)) {
-        cprintf("      page directory entry not present.\n");
-		return;
-    }
-	p = (pte_t*) KADDR(PTE_ADDR(*pgdir));
-	if (!(p[PTX(va)] & PTE_P)) {
-        cprintf("      page table entry not present.\n");
-		return;
-    }
-	cprintf("      pde=%p, pte=%p\n", *pgdir, p[PTX(va)]);
->>>>>>> lab2
 }
 
 // check page_insert, page_remove, &c

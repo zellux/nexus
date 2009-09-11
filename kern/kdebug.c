@@ -238,3 +238,41 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	
 	return 0;
 }
+
+void
+dump_tf(struct Trapframe *tf)
+{
+    dprintk("=== Dump Tranframe ===\n");
+    dprintk("cs %8.0x \tds %8.0x \tes %8.0x \tss %8.0x\n",
+            tf->tf_cs, tf->tf_ds, tf->tf_es, tf->tf_ss);
+    dprintk("eip %8.0x \tesp %8.0x\n",
+            tf->tf_eip, tf->tf_esp);
+    dprintk("trapno %d \teflags %8.0x\n",
+            tf->tf_trapno, tf->tf_eflags);
+}
+    
+/** 
+ * dump information about virtual-to-physical address mapping
+ * 
+ * @param pgdir 
+ * @param va 
+ */
+void
+dump_va_mapping(pde_t *pgdir, uintptr_t va)
+{
+	pte_t *p;
+
+    cprintf("dump: pgdir=%p, va=%p\n", pgdir, va);
+	pgdir = &pgdir[PDX(va)];
+	if (!(*pgdir & PTE_P)) {
+        cprintf("      page directory entry not present.\n");
+		return;
+    }
+	p = (pte_t*) KADDR(PTE_ADDR(*pgdir));
+	if (!(p[PTX(va)] & PTE_P)) {
+        cprintf("      page table entry not present.\n");
+		return;
+    }
+	cprintf("      pde=%p, pte=%p\n", *pgdir, p[PTX(va)]);
+}
+
