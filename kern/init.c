@@ -10,7 +10,7 @@
 #include <kern/kclock.h>
 #include <kern/env.h>
 #include <kern/trap.h>
-
+#include <kern/kdebug.h>
 
 void
 i386_init(void)
@@ -43,11 +43,12 @@ i386_init(void)
 	ENV_CREATE2(TEST, TESTSIZE);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_hello);
+	ENV_CREATE(user_faultreadkernel);
 #endif // TEST*
 
 
 	// We only have one user environment for now, so just run it.
+    MAGIC_BREAK;
 	env_run(&envs[0]);
 
 	// Test the stack backtrace function (lab 1 only)

@@ -8,8 +8,12 @@
 #include <kern/monitor.h>
 #include <kern/env.h>
 #include <kern/syscall.h>
+#include <kern/kdebug.h>
 
 static struct Taskstate ts;
+
+void tf_handler_default(struct Trapframe *);
+void tf_handler_brkpt(struct Trapframe *);
 
 /* Interrupt descriptor table.  (Must be built at run time because
  * shifted function addresses can't be represented in relocation records.)
@@ -19,6 +23,7 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
+traphandler_t idt_handlers[256] = { tf_handler_default };
 
 static const char *trapname(int trapno)
 {
@@ -59,7 +64,20 @@ idt_init(void)
 	extern struct Segdesc gdt[];
 	
 	// LAB 3: Your code here.
+    extern void trap_divide();
+    extern void trap_syscall();
+    extern void trap_gpflt();
+    extern void trap_pgflt();
+    extern void trap_brkpt();
 
+    SETGATE(idt[0], 0, GD_KT, trap_divide, 0);
+    SETGATE(idt[3], 1, GD_KT, trap_brkpt, 3);
+    SETGATE(idt[13], 0, GD_KT, trap_gpflt, 0);
+    SETGATE(idt[14], 0, GD_KT, trap_pgflt, 0);
+    SETGATE(idt[48], 0, GD_KT, trap_syscall, 3);
+
+    idt_handlers[14] = page_fault_handler;
+    
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
 	ts.ts_esp0 = KSTACKTOP;
@@ -112,21 +130,21 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
 	
-
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
-	if (tf->tf_cs == GD_KT)
-		panic("unhandled trap in kernel");
-	else {
+
+    if (tf->tf_trapno >= 256) {
 		env_destroy(curenv);
 		return;
-	}
+    }
+    idt_handlers[tf->tf_trapno](tf);
 }
 
 void
 trap(struct Trapframe *tf)
 {
 	cprintf("Incoming TRAP frame at %p\n", tf);
+    MAGIC_BREAK;
 
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
@@ -142,9 +160,9 @@ trap(struct Trapframe *tf)
 	// Dispatch based on what type of trap occurred
 	trap_dispatch(tf);
 
-        // Return to the current environment, which should be runnable.
-        assert(curenv && curenv->env_status == ENV_RUNNABLE);
-        env_run(curenv);
+    // Return to the current environment, which should be runnable.
+    assert(curenv && curenv->env_status == ENV_RUNNABLE);
+    env_run(curenv);
 }
 
 
@@ -167,6 +185,30 @@ page_fault_handler(struct Trapframe *tf)
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);
 	print_trapframe(tf);
+    MAGIC_BREAK;
 	env_destroy(curenv);
 }
 
+void
+tf_handler_default(struct Trapframe *tf)
+{
+    if (tf->tf_trapno == T_SYSCALL) {
+        syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
+                tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+        return;
+    }
+    
+    return;
+	if (tf->tf_cs == GD_KT)
+		panic("unhandled trap in kernel");
+	else {
+		env_destroy(curenv);
+		return;
+	}
+}
+
+void
+tf_handler_brkpt(struct Trapframe *tf)
+{
+    monitor(tf);
+}

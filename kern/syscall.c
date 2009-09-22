@@ -79,6 +79,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// Return any appropriate return value.
 	// LAB 3: Your code here.
 
+    switch (syscallno) {
+    case SYS_cputs:
+        sys_cputs((const char *) a1, a2);
+        return 0;
+    }
+    
 	panic("syscall not implemented");
 }
 

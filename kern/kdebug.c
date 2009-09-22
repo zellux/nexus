@@ -12,6 +12,10 @@ extern const struct Stab __STAB_END__[];	// End of stabs table
 extern const char __STABSTR_BEGIN__[];		// Beginning of string table
 extern const char __STABSTR_END__[];		// End of string table
 
+struct Trapframe;
+
+extern void print_trapframe(struct Trapframe *);
+
 struct UserStabData {
 	const struct Stab *stabs;
 	const struct Stab *stab_end;
@@ -242,13 +246,14 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 void
 dump_tf(struct Trapframe *tf)
 {
-    dprintk("=== Dump Tranframe ===\n");
-    dprintk("cs %8.0x \tds %8.0x \tes %8.0x \tss %8.0x\n",
-            tf->tf_cs, tf->tf_ds, tf->tf_es, tf->tf_ss);
-    dprintk("eip %8.0x \tesp %8.0x\n",
-            tf->tf_eip, tf->tf_esp);
-    dprintk("trapno %d \teflags %8.0x\n",
-            tf->tf_trapno, tf->tf_eflags);
+    print_trapframe(tf);
+    /* dprintk("=== Dump Tranframe ===\n"); */
+    /* dprintk("cs %8.0x \tds %8.0x \tes %8.0x \tss %8.0x\n", */
+    /*         tf->tf_cs, tf->tf_ds, tf->tf_es, tf->tf_ss); */
+    /* dprintk("eip %8.0x \tesp %8.0x\n", */
+    /*         tf->tf_eip, tf->tf_esp); */
+    /* dprintk("trapno %d \teflags %8.0x\n", */
+    /*         tf->tf_trapno, tf->tf_eflags); */
 }
     
 /** 

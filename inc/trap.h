@@ -72,6 +72,8 @@ struct Trapframe {
 };
 
 
+typedef void (*traphandler_t)(struct Trapframe *);
+
 #endif /* !__ASSEMBLER__ */
 
 // Must equal 'sizeof(struct Trapframe)'.
