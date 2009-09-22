@@ -23,7 +23,7 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
-traphandler_t idt_handlers[256] = { tf_handler_default };
+traphandler_t idt_handlers[256] = { [0 ... 255] = tf_handler_default };
 
 static const char *trapname(int trapno)
 {
@@ -74,7 +74,7 @@ idt_init(void)
     SETGATE(idt[3], 1, GD_KT, trap_brkpt, 3);
     SETGATE(idt[13], 0, GD_KT, trap_gpflt, 0);
     SETGATE(idt[14], 0, GD_KT, trap_pgflt, 0);
-    SETGATE(idt[48], 0, GD_KT, trap_syscall, 3);
+    SETGATE(idt[48], 1, GD_KT, trap_syscall, 3);
 
     idt_handlers[14] = page_fault_handler;
     
@@ -137,6 +137,7 @@ trap_dispatch(struct Trapframe *tf)
 		env_destroy(curenv);
 		return;
     }
+    dprintk("trap_dispatch: handler=%p\n", idt_handlers[tf->tf_trapno]);
     idt_handlers[tf->tf_trapno](tf);
 }
 
@@ -144,7 +145,6 @@ void
 trap(struct Trapframe *tf)
 {
 	cprintf("Incoming TRAP frame at %p\n", tf);
-    MAGIC_BREAK;
 
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
@@ -175,8 +175,9 @@ page_fault_handler(struct Trapframe *tf)
 	fault_va = rcr2();
 
 	// Handle kernel-mode page faults.
-	
-	// LAB 3: Your code here.
+    if (tf->tf_cs == GD_KT) {
+        panic("page fault at kernel mode");
+    }
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
@@ -198,7 +199,6 @@ tf_handler_default(struct Trapframe *tf)
         return;
     }
     
-    return;
 	if (tf->tf_cs == GD_KT)
 		panic("unhandled trap in kernel");
 	else {

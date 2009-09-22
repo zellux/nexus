@@ -754,8 +754,23 @@ static uintptr_t user_mem_check_addr;
 int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
-	// LAB 3: Your code here. 
+    unsigned start = ROUNDDOWN((unsigned) va, PGSIZE);
+    unsigned end = ROUNDUP((unsigned) va + len, PGSIZE);
+    pte_t *pte;
+    unsigned flags;
+    
+    if (env->env_tf.tf_cs == GD_KT) {
+        return 0;
+    }
 
+    while (start < end) {
+        page_lookup(env->env_pgdir, (void *) start, &pte);
+        flags = (*pte) & 0xFFF;
+        if ((perm & (~flags)) > 0)
+            return -E_FAULT;
+        start += PGSIZE;
+    }
+    
 	return 0;
 }
 

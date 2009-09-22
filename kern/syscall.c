@@ -10,6 +10,7 @@
 #include <kern/trap.h>
 #include <kern/syscall.h>
 #include <kern/console.h>
+#include <kern/kdebug.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -19,9 +20,12 @@ sys_cputs(const char *s, size_t len)
 {
 	// Check that the user has permission to read memory [s, s+len).
 	// Destroy the environment if not.
-	
-	// LAB 3: Your code here.
-
+    if (user_mem_check(curenv, s, len, PTE_U)) {
+        cprintf("[%08x] user_mem_check assertion failure for va %08x\n",
+                curenv->env_id, s);
+        env_destroy(curenv);
+    }        
+    
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
 }
