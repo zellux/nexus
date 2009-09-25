@@ -12,7 +12,7 @@
 #include <kern/trap.h>
 #include <kern/sched.h>
 #include <kern/picirq.h>
-
+#include <kern/kdebug.h>
 
 void
 i386_init(void)
@@ -56,8 +56,6 @@ i386_init(void)
 
 	// Schedule and run the first user environment!
 	sched_yield();
-
-
 }
 
 

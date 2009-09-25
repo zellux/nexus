@@ -83,6 +83,8 @@ struct UTrapframe {
 	uintptr_t utf_esp;
 };
 
+typedef void (*traphandler_t)(struct Trapframe *);
+
 #endif /* !__ASSEMBLER__ */
 
 // Must equal 'sizeof(struct Trapframe)'.

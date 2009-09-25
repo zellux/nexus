@@ -59,12 +59,12 @@ runtest () {
 	[ "$preservefs" = y ] || rm -f obj/fs/fs.img
 	if $verbose
 	then
-		echo "gmake $2... "
+		echo "make $2... "
 	fi
-	gmake $2 >$out
+	make $2 >$out
 	if [ $? -ne 0 ]
 	then
-		echo gmake $2 failed 
+		echo make $2 failed 
 		exit 1
 	fi
 	runbochs
@@ -157,6 +157,8 @@ runtest1 () {
 }
 
 
+make
+runbochs
 
 score=0
 timeout=10
