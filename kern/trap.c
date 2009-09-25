@@ -70,12 +70,13 @@ idt_init(void)
     extern void trap_pgflt();
     extern void trap_brkpt();
 
-    SETGATE(idt[0], 0, GD_KT, trap_divide, 0);
+    SETGATE(idt[0], 0, GD_KT, trap_divide, 3);
     SETGATE(idt[3], 1, GD_KT, trap_brkpt, 3);
     SETGATE(idt[13], 0, GD_KT, trap_gpflt, 0);
     SETGATE(idt[14], 0, GD_KT, trap_pgflt, 0);
     SETGATE(idt[48], 1, GD_KT, trap_syscall, 3);
 
+    idt_handlers[3] = tf_handler_brkpt;
     idt_handlers[14] = page_fault_handler;
     
 	// Setup a TSS so that we get the right stack
@@ -128,7 +129,6 @@ static void
 trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
-	// LAB 3: Your code here.
 	
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -137,7 +137,7 @@ trap_dispatch(struct Trapframe *tf)
 		env_destroy(curenv);
 		return;
     }
-    dprintk("trap_dispatch: handler=%p\n", idt_handlers[tf->tf_trapno]);
+    /* dprintk("trap_dispatch: handler=%p\n", idt_handlers[tf->tf_trapno]); */
     idt_handlers[tf->tf_trapno](tf);
 }
 
@@ -145,6 +145,8 @@ void
 trap(struct Trapframe *tf)
 {
 	cprintf("Incoming TRAP frame at %p\n", tf);
+	print_trapframe(tf);
+    MAGIC_BREAK;
 
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
@@ -174,6 +176,9 @@ page_fault_handler(struct Trapframe *tf)
 	// Read processor's CR2 register to find the faulting address
 	fault_va = rcr2();
 
+	cprintf("[%08x] user fault va %08x ip %08x\n",
+		curenv->env_id, fault_va, tf->tf_eip);
+
 	// Handle kernel-mode page faults.
     if (tf->tf_cs == GD_KT) {
         panic("page fault at kernel mode");
@@ -183,8 +188,6 @@ page_fault_handler(struct Trapframe *tf)
 	// the page fault happened in user mode.
 
 	// Destroy the environment that caused the fault.
-	cprintf("[%08x] user fault va %08x ip %08x\n",
-		curenv->env_id, fault_va, tf->tf_eip);
 	print_trapframe(tf);
     MAGIC_BREAK;
 	env_destroy(curenv);
@@ -193,15 +196,19 @@ page_fault_handler(struct Trapframe *tf)
 void
 tf_handler_default(struct Trapframe *tf)
 {
+    int retval;
+    
     if (tf->tf_trapno == T_SYSCALL) {
-        syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
+        retval = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
                 tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+        tf->tf_regs.reg_eax = retval;
         return;
     }
     
-	if (tf->tf_cs == GD_KT)
+	if (tf->tf_cs == GD_KT) {
 		panic("unhandled trap in kernel");
-	else {
+		env_destroy(curenv);
+    } else {
 		env_destroy(curenv);
 		return;
 	}

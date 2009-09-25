@@ -711,7 +711,7 @@ page_remove(pde_t *pgdir, void *va)
     pte_t *pte;
 
     pp = page_lookup(pgdir, va, &pte);
-    dprintk("pp=%p\n", pp);
+    /* dprintk("pp=%p\n", pp); */
     if (!pp)
         return;
     page_decref(pp);

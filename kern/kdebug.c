@@ -267,17 +267,17 @@ dump_va_mapping(pde_t *pgdir, uintptr_t va)
 {
 	pte_t *p;
 
-    cprintf("dump: pgdir=%p, va=%p\n", pgdir, va);
+    dprintk("dump: pgdir=%p, va=%p\n", pgdir, va);
 	pgdir = &pgdir[PDX(va)];
 	if (!(*pgdir & PTE_P)) {
-        cprintf("      page directory entry not present.\n");
+        dprintk("      page directory entry not present.\n");
 		return;
     }
 	p = (pte_t*) KADDR(PTE_ADDR(*pgdir));
 	if (!(p[PTX(va)] & PTE_P)) {
-        cprintf("      page table entry not present.\n");
+        dprintk("      page table entry not present.\n");
 		return;
     }
-	cprintf("      pde=%p, pte=%p\n", *pgdir, p[PTX(va)]);
+	dprintk("      pde=%p, pte=%p\n", *pgdir, p[PTX(va)]);
 }
 

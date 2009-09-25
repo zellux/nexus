@@ -143,7 +143,7 @@ monitor(struct Trapframe *tf)
 	/* if (tf != NULL) */
 	/* 	print_trapframe(tf); */
 
-    mon_backtrace(0, NULL, tf);
+    /* mon_backtrace(0, NULL, tf); */
 
 	while (1) {
 		buf = readline("K> ");

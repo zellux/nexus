@@ -54,10 +54,10 @@ name:                                             \
  /*
   * Lab 3: Your code here for generating entry points for the different traps.
   */
-TRAPHANDLER(trap_divide, 0);
+TRAPHANDLER_NOEC(trap_divide, 0);
 TRAPHANDLER(trap_debug, 1);
 TRAPHANDLER(trap_nmi, 2);
-TRAPHANDLER(trap_brkpt, 3);
+TRAPHANDLER_NOEC(trap_brkpt, 3);
 TRAPHANDLER(trap_oflow, 4);
 TRAPHANDLER(trap_bound, 5);
 TRAPHANDLER(trap_illop, 6);

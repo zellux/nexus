@@ -210,9 +210,12 @@ segment_alloc(struct Env *e, void *va, size_t len)
 	//   You should round va down, and round len up.
     int i;
     uint32_t nva = ROUNDDOWN((uint32_t) va, PGSIZE);
+    uint32_t oldlen = len;
     struct Page *pp;
-    
-    len = ROUNDUP(len, PGSIZE);
+
+    len = ROUNDUP((unsigned) va + len, PGSIZE) - nva;
+    dprintk("segment_alloc [%08x, %08x) => [%08x, %08x)\n",
+            va, va + oldlen, nva, nva + len);
     for (i = 0; i < len; i += PGSIZE) {
         if (page_alloc(&pp)) {
             break;
@@ -291,9 +294,15 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
             ph ++;
             continue;
         }
+        dprintk("%x %x %x\n", ph->p_va, ph->p_filesz, ph->p_memsz);
         segment_alloc(e, (void *) ph->p_va, ph->p_memsz);
         lcr3(e->env_cr3);
-        memmove((void *) ph->p_va, &binary[ph->p_offset], ph->p_memsz);
+        if (ph->p_filesz >= ph->p_memsz) {
+            memmove((void *) ph->p_va, &binary[ph->p_offset], ph->p_memsz);
+        } else {
+            memset((void *) ph->p_va, 0, ph->p_memsz);
+            MAGIC_BREAK;
+        }
         ph ++;
     }
     lcr3(boot_cr3);
@@ -302,8 +311,8 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
-	// LAB 3: Your code here.
     segment_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
+    dprintk("load_icode finished.\n");
 }
 
 //
@@ -403,7 +412,7 @@ void
 env_pop_tf(struct Trapframe *tf)
 {
     dprintfunc();
-    dump_tf(tf);
+    /* dump_tf(tf); */
     dump_va_mapping((pde_t *) KADDR(curenv->env_cr3), tf->tf_eip);
     MAGIC_BREAK;
 	__asm __volatile("movl %0,%%esp\n"

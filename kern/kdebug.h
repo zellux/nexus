@@ -4,11 +4,17 @@
 #include <inc/types.h>
 #include <inc/memlayout.h>
 
+#define DEBUG 0
+
+#if DEBUG == 1
 #define MAGIC_BREAK                                                 \
     do {                                                            \
         cprintf("Magic break at %s[%d]\n", __FUNCTION__, __LINE__); \
         __asm__("xchg %%bx, %%bx": :);                              \
     } while (0)
+#else
+#define MAGIC_BREAK
+#endif
 
 struct Trapframe;
 
@@ -28,7 +34,11 @@ extern int debuginfo_eip(uintptr_t eip, struct Eipdebuginfo *info);
 extern void dump_tf(struct Trapframe *tf);
 extern void dump_va_mapping(pde_t *pgdir, uintptr_t va);
 
+#if DEBUG == 1
 #define dprintk(_f, _a...) cprintf(_f, ## _a)
+#else
+#define dprintk(_f, _a...)
+#endif
 
 #define dprintfunc() dprintk("%s [%d]\n", __FUNCTION__, __LINE__)
 
