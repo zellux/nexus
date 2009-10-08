@@ -261,11 +261,15 @@ runtest1 testbss \
 	'.00001000. free env 00001000'
 
 runtest1 testdump \
+    ! "env_syscalls = 3" \
 	'env_id = 00001000' \
     'env_parent_id = 00000000' \
     'env_runs = .*' \
 	'env_pgdir = .*' \
-	'env_cr3 = .*'
+	'env_cr3 = .*' \
+    "env_syscalls = 1" \
+    "env_syscalls = 2" \
+    "env_syscalls = 4"
 
 
 

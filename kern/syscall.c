@@ -83,6 +83,7 @@ sys_dump_env()
     cprintf("env_runs = %d\n", e->env_runs);
     cprintf("env_pgdir = %08x\n", e->env_pgdir);
     cprintf("env_cr3 = %08x\n", e->env_cr3);
+    cprintf("env_syscalls = %d\n", e->env_syscalls);
 
     return 0;
 }
@@ -94,6 +95,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// Call the function corresponding to the 'syscallno' parameter.
 	// Return any appropriate return value.
 
+    curenv->env_syscalls ++;
     dprintk("syscall no=%d, a1=0x%08x, a2=0x%08x, a3=0x%08x\n", syscallno, a1, a2, a3);
     dump_va_mapping(curenv->env_pgdir, (unsigned) syscall);
     dump_va_mapping(curenv->env_pgdir, (unsigned) user_mem_check);
