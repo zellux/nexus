@@ -35,6 +35,7 @@ i386_init(void)
 	// Lab 3 user environment initialization functions
 	env_init();
 	idt_init();
+    msr_init();
 
 
 	// Temporary test code specific to LAB 3
@@ -43,7 +44,7 @@ i386_init(void)
 	ENV_CREATE2(TEST, TESTSIZE);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_testdump);
+	ENV_CREATE(user_hello);
 #endif // TEST*
 
 
@@ -99,4 +100,18 @@ _warn(const char *file, int line, const char *fmt,...)
 	vcprintf(fmt, ap);
 	cprintf("\n");
 	va_end(ap);
+}
+
+void
+msr_init()
+{
+    extern void sysenter_handler();
+    struct Page *pp;
+
+    page_alloc(&pp);
+    wrmsr(0x174, GD_KT, 0);
+    wrmsr(0x175, page2kva(pp) + PGSIZE, 0);
+    wrmsr(0x176, sysenter_handler, 0);
+
+    dump_msr();
 }
