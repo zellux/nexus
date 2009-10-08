@@ -8,6 +8,7 @@ enum
 	SYS_cgetc,
 	SYS_getenvid,
 	SYS_env_destroy,
+    SYS_dump_env,
 	NSYSCALLS
 };
 

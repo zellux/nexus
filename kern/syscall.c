@@ -73,7 +73,19 @@ sys_env_destroy(envid_t envid)
 	return 0;
 }
 
+static int
+sys_dump_env()
+{
+    struct Env *e = curenv;
 
+    cprintf("env_id = %08x\n", e->env_id);
+    cprintf("env_parent_id = %08x\n", e->env_parent_id);
+    cprintf("env_runs = %d\n", e->env_runs);
+    cprintf("env_pgdir = %08x\n", e->env_pgdir);
+    cprintf("env_cr3 = %08x\n", e->env_cr3);
+
+    return 0;
+}
 
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
@@ -93,6 +105,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_getenvid();
     case SYS_env_destroy:
         return sys_env_destroy(curenv->env_id);
+    case SYS_dump_env:
+        return sys_dump_env();
     }
     
 	panic("syscall not implemented");

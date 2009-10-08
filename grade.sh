@@ -260,11 +260,18 @@ runtest1 testbss \
 	'.00001000. user fault va 00c..... ip 008.....' \
 	'.00001000. free env 00001000'
 
+runtest1 testdump \
+	'env_id = 00001000' \
+    'env_parent_id = 00000000' \
+    'env_runs = .*' \
+	'env_pgdir = .*' \
+	'env_cr3 = .*'
 
 
-echo "Score: $score/60"
 
-if [ $score -lt 60 ]; then
+echo "Score: $score/65"
+
+if [ $score -lt 65 ]; then
     exit 1
 fi
 

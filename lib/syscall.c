@@ -61,4 +61,8 @@ sys_getenvid(void)
 	 return syscall(SYS_getenvid, 0, 0, 0, 0, 0, 0);
 }
 
-
+int
+sys_dump_env(void)
+{
+    return syscall(SYS_dump_env, 0, 0, 0, 0, 0, 0);
+}
