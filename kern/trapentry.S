@@ -108,7 +108,7 @@ sysenter_handler:
 		
         pushl %ds
         pushl %es
-        pusha
+//        pusha
         pushl %esp
 
 		push $0
@@ -122,7 +122,7 @@ sysenter_handler:
 
 		addl $24, %esp
         popl %esp
-        popa
+//        popa
         popl %es
         popl %ds
 

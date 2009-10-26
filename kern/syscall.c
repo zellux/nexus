@@ -94,7 +94,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 {
 	// Call the function corresponding to the 'syscallno' parameter.
 	// Return any appropriate return value.
-
+    int32_t ret;
+    
     curenv->env_syscalls ++;
     dprintk("syscall no=%d, a1=0x%08x, a2=0x%08x, a3=0x%08x\n", syscallno, a1, a2, a3);
     dump_va_mapping(curenv->env_pgdir, (unsigned) syscall);
@@ -109,7 +110,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     case SYS_cgetc:
         return sys_cgetc();
     case SYS_getenvid:
-        return sys_getenvid();
+        ret = sys_getenvid();
+        dprintk("%x\n", ret);
+        MAGIC_BREAK;
+        return ret;
     case SYS_env_destroy:
         return sys_env_destroy(curenv->env_id);
     case SYS_dump_env:
