@@ -73,6 +73,7 @@ int32_t ipc_recv(envid_t *from_env_store, void *pg, int *perm_store);
 envid_t	fork(void);
 envid_t	sfork(void);	// Challenge!
 
+int sys_dump_env();
 
 
 /* File open modes */

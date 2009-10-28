@@ -6,6 +6,7 @@
 #include <kern/kdebug.h>
 #include <kern/pmap.h>
 #include <kern/env.h>
+#include <kern/trap.h>
 
 extern const struct Stab __STAB_BEGIN__[];	// Beginning of stabs table
 extern const struct Stab __STAB_END__[];	// End of stabs table
@@ -279,5 +280,18 @@ dump_va_mapping(pde_t *pgdir, uintptr_t va)
 		return;
     }
 	dprintk("      pde=%p, pte=%p\n", *pgdir, p[PTX(va)]);
+}
+
+void
+dump_msr()
+{
+    uint32_t v1, v2;
+
+    rdmsr(0x174, v1, v2);
+    dprintk("IA32_SYSENTER_CS   %08x\n", v1+v2);
+    rdmsr(0x175, v1, v2);
+    dprintk("IA32_SYSENTER_ESP  %08x\n", v1);
+    rdmsr(0x176, v1, v2);
+    dprintk("IA32_SYSENTER_EIP  %08x\n", v1);
 }
 

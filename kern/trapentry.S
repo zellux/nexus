@@ -99,3 +99,35 @@ _alltraps:
         popl %ds
         subl $8, %esp
         iret
+
+.globl sysenter_handler;        /* define global symbol for 'name' */ \
+.type  sysenter_handler, @function;    /* symbol type is function */  \
+.align 2;        /* align function definition */          \
+sysenter_handler:
+		pushl %esi /* return pc */
+		pushl %ebp /* return esp */
+		
+        pushl %ds
+        pushl %es
+//        pusha
+        pushl %esp
+
+		push $0
+		push %edi
+		push %ebx
+		push %ecx
+		push %edx
+		push %eax
+
+		call syscall
+
+		addl $24, %esp
+        popl %esp
+//        popa
+        popl %es
+        popl %ds
+
+		popl %ecx
+		popl %edx
+
+		sysexit

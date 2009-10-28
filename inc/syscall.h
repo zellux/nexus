@@ -18,6 +18,7 @@ enum
 	SYS_yield,
 	SYS_ipc_try_send,
 	SYS_ipc_recv,
+    SYS_dump_env,
 	NSYSCALLS
 };
 

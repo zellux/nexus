@@ -286,6 +286,20 @@ sys_ipc_recv(void *dstva)
 	return 0;
 }
 
+static int
+sys_dump_env()
+{
+    struct Env *e = curenv;
+
+    cprintf("env_id = %08x\n", e->env_id);
+    cprintf("env_parent_id = %08x\n", e->env_parent_id);
+    cprintf("env_runs = %d\n", e->env_runs);
+    cprintf("env_pgdir = %08x\n", e->env_pgdir);
+    cprintf("env_cr3 = %08x\n", e->env_cr3);
+    cprintf("env_syscalls = %d\n", e->env_syscalls);
+
+    return 0;
+}
 
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
@@ -293,18 +307,30 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 {
 	// Call the function corresponding to the 'syscallno' parameter.
 	// Return any appropriate return value.
-	// LAB 3: Your code here.
-
+    int32_t ret;
+    
+    curenv->env_syscalls ++;
+    dprintk("syscall no=%d, a1=0x%08x, a2=0x%08x, a3=0x%08x\n", syscallno, a1, a2, a3);
+    dump_va_mapping(curenv->env_pgdir, (unsigned) syscall);
+    dump_va_mapping(curenv->env_pgdir, (unsigned) user_mem_check);
+    tlbflush();
+    
     switch (syscallno) {
     case SYS_cputs:
+        MAGIC_BREAK;
         sys_cputs((const char *) a1, a2);
         return 0;
     case SYS_cgetc:
         return sys_cgetc();
     case SYS_getenvid:
-        return sys_getenvid();
+        ret = sys_getenvid();
+        dprintk("%x\n", ret);
+        MAGIC_BREAK;
+        return ret;
     case SYS_env_destroy:
         return sys_env_destroy(curenv->env_id);
+    case SYS_dump_env:
+        return sys_dump_env();
     }
     
 	panic("syscall not implemented");
