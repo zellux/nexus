@@ -130,3 +130,4 @@ sysenter_handler:
 		popl %edx
 
 		sysexit
+

@@ -23,7 +23,8 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
-traphandler_t idt_handlers[256] = { [0 ... 255] = tf_handler_default };
+/* traphandler_t idt_handlers[256] = { [0 ... 255] = tf_handler_default }; */
+traphandler_t idt_handlers[256];
 
 static const char *trapname(int trapno)
 {
@@ -62,6 +63,7 @@ void
 idt_init(void)
 {
 	extern struct Segdesc gdt[];
+    int i;
 	
 	// LAB 3: Your code here.
     extern void trap_divide();
@@ -76,6 +78,9 @@ idt_init(void)
     SETGATE(idt[14], 0, GD_KT, trap_pgflt, 0);
     SETGATE(idt[48], 1, GD_KT, trap_syscall, 3);
 
+    for (i = 0; i < 256; i++) {
+        idt_handlers[i] = tf_handler_default;
+    }
     idt_handlers[3] = tf_handler_brkpt;
     idt_handlers[14] = page_fault_handler;
     
