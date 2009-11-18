@@ -20,12 +20,8 @@ sys_cputs(const char *s, size_t len)
 {
 	// Check that the user has permission to read memory [s, s+len).
 	// Destroy the environment if not.
-    if (user_mem_check(curenv, s, len, PTE_U)) {
-        cprintf("[%08x] user_mem_check assertion failure for va %08x\n",
-                curenv->env_id, s);
-        env_destroy(curenv);
-    }        
-    
+    user_mem_assert(curenv, s, len, PTE_U);
+
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
 }
