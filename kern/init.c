@@ -108,11 +108,9 @@ void
 msr_init()
 {
     extern void sysenter_handler();
-    struct Page *pp;
 
-    page_alloc(&pp);
     wrmsr(0x174, GD_KT, 0);
-    wrmsr(0x175, page2kva(pp) + PGSIZE, 0);
+    wrmsr(0x175, KSTACKTOP, 0);
     wrmsr(0x176, sysenter_handler, 0);
 
     dump_msr();
