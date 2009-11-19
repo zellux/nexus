@@ -119,3 +119,18 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	panic("syscall not implemented");
 }
 
+int32_t
+do_sysenter(struct Trapframe *tf)
+{
+    struct PushRegs *r = &tf->tf_regs;
+    int32_t ret;
+
+    print_trapframe(tf);
+    ret = syscall(r->reg_eax, r->reg_edx, r->reg_ecx, r->reg_ebx, r->reg_edi, 0);
+    __asm__ __volatile__("sysexit"
+                         :
+                         : "c" (tf->tf_esp), "d" (tf->tf_eip), "a" (ret)
+                         : "cc");
+    return 0;
+}
+

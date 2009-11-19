@@ -74,6 +74,9 @@ struct Trapframe {
 
 typedef void (*traphandler_t)(struct Trapframe *);
 
+extern int32_t do_sysenter(struct Trapframe *tf);
+
+
 #endif /* !__ASSEMBLER__ */
 
 // Must equal 'sizeof(struct Trapframe)'.
