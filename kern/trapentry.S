@@ -110,7 +110,7 @@ sysenter_handler:
 		pushl %cs
 		pushl %esi
 		pushl $0
-		pushl $0
+		pushl $48
         pushl %ds
         pushl %es
 		pusha
