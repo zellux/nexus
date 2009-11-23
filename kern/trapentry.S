@@ -3,7 +3,6 @@
 #include <inc/mmu.h>
 #include <inc/memlayout.h>
 #include <inc/trap.h>
-
 #include <kern/picirq.h>
 
 
@@ -104,28 +103,26 @@ _alltraps:
 .type  sysenter_handler, @function;    /* symbol type is function */  \
 .align 2;        /* align function definition */          \
 sysenter_handler:
-		pushl %esi /* return pc */
-		pushl %ebp /* return esp */
+//		pushl %esi /* return pc */
+//		pushl %ebp /* return esp */
+
+		movl %ebp, %ecx
+		movl %esi, %edx
 		
+		pushl %ss
+		pushl %ebp
+		pushf
+		pushl %cs
+		pushl %esi
+		pushl $0
+		pushl $48
         pushl %ds
         pushl %es
+		pusha
 //        pusha
         pushl %esp
 
-		push $0
-		push %edi
-		push %ebx
-		push %ecx
-		push %edx
-		push %eax
-
-		call syscall
-
-		addl $24, %esp
-        popl %esp
-//        popa
-        popl %es
-        popl %ds
+		call do_sysenter
 
 		popl %ecx
 		popl %edx

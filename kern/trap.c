@@ -154,7 +154,7 @@ trap_dispatch(struct Trapframe *tf)
 
 
 	// Unexpected trap: The user process or the kernel has a bug.
-	print_trapframe(tf);
+	/* print_trapframe(tf); */
 
     if (tf->tf_trapno >= 256) {
 		env_destroy(curenv);

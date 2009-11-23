@@ -225,8 +225,8 @@ segment_alloc(struct Env *e, void *va, size_t len)
     struct Page *pp;
 
     len = ROUNDUP((unsigned) va + len, PGSIZE) - nva;
-    dprintk("segment_alloc [%08x, %08x) => [%08x, %08x)\n",
-            va, va + oldlen, nva, nva + len);
+    /* dprintk("segment_alloc [%08x, %08x) => [%08x, %08x)\n", */
+    /*         va, va + oldlen, nva, nva + len); */
     for (i = 0; i < len; i += PGSIZE) {
         if (page_alloc(&pp)) {
             break;
@@ -293,7 +293,6 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
     struct Elf *elf;
     int i;
 
-    dprintfunc();
     elf = (struct Elf *) binary;
     if (elf->e_magic != ELF_MAGIC) {
         panic("elf->magic != ELF_MAGIC.");
@@ -305,14 +304,13 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
             ph ++;
             continue;
         }
-        dprintk("%x %x %x\n", ph->p_va, ph->p_filesz, ph->p_memsz);
+        /* dprintk("%x %x %x\n", ph->p_va, ph->p_filesz, ph->p_memsz); */
         segment_alloc(e, (void *) ph->p_va, ph->p_memsz);
         lcr3(e->env_cr3);
         if (ph->p_filesz >= ph->p_memsz) {
             memmove((void *) ph->p_va, &binary[ph->p_offset], ph->p_memsz);
         } else {
             memset((void *) ph->p_va, 0, ph->p_memsz);
-            MAGIC_BREAK;
         }
         ph ++;
     }
@@ -423,10 +421,9 @@ env_destroy(struct Env *e)
 void
 env_pop_tf(struct Trapframe *tf)
 {
-    dprintfunc();
     /* dump_tf(tf); */
-    dump_va_mapping((pde_t *) KADDR(curenv->env_cr3), tf->tf_eip);
-    MAGIC_BREAK;
+    /* dump_va_mapping((pde_t *) KADDR(curenv->env_cr3), tf->tf_eip); */
+    /* MAGIC_BREAK; */
 	__asm __volatile("movl %0,%%esp\n"
 		"\tpopal\n"
 		"\tpopl %%es\n"
@@ -460,7 +457,7 @@ env_run(struct Env *e)
 	
 	// LAB 3: Your code here.
 
-    dprintfunc();
+    /* dprintfunc(); */
     curenv = e;
     lcr3((uint32_t) e->env_cr3);
     env_pop_tf(&e->env_tf);

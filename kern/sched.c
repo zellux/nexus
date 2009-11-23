@@ -3,6 +3,7 @@
 #include <kern/env.h>
 #include <kern/pmap.h>
 #include <kern/monitor.h>
+#include <kern/kdebug.h>
 
 
 // Choose a user environment to run and run it.
@@ -22,17 +23,21 @@ sched_yield(void)
     struct Env *e;
     int i;
 
-    for (i = 1; i < NENVS; i++) {
+    for (i = 1; i < NENV; i++) {
+        if (&envs[i] == curenv)
+            continue;
         if (envs[i].env_status == ENV_RUNNABLE) {
+            dprintk("Now switch to env[%d]\n", i);
             env_run(&envs[i]);
             return;
         }
     }
 
 	// Run the special idle environment when nothing else is runnable.
-	if (envs[0].env_status == ENV_RUNNABLE)
+	if (envs[0].env_status == ENV_RUNNABLE) {
+        dprintk("Scheduler: have nothing to run but idle\n");
 		env_run(&envs[0]);
-	else {
+	} else {
 		cprintf("Destroyed all environments - nothing more to do!\n");
 		while (1)
 			monitor(NULL);

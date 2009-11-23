@@ -620,7 +620,7 @@ page_insert(pde_t *pgdir, struct Page *pp, void *va, int perm)
 {
     pte_t *pte;
 
-    dump_va_mapping(pgdir, (uintptr_t) va);
+    /* dump_va_mapping(pgdir, (uintptr_t) va); */
     pte = pgdir_walk(pgdir, va, 1);
     if (pte != 0 && *pte != 0 && pa2page(PTE_ADDR(*pte)) != pp) {
         dprintk("page_insert: pte=%p, already mapped, remove first.\n", *pte);
@@ -633,8 +633,8 @@ page_insert(pde_t *pgdir, struct Page *pp, void *va, int perm)
     if (pa2page(PTE_ADDR(*pte)) != pp) 
         pp->pp_ref ++;
     *pte = (page2pa(pp) & ~0xFFF) | perm | PTE_P;
-    dprintk("page_insert: pgdir=%p, va=%p\n", pgdir, va);
-    dprintk("             pte ptr=%p, pte val=%p, pp_ref=%d\n", pte, *pte, pp->pp_ref);
+    /* dprintk("page_insert: pgdir=%p, va=%p\n", pgdir, va); */
+    /* dprintk("             pte ptr=%p, pte val=%p, pp_ref=%d\n", pte, *pte, pp->pp_ref); */
 
 	return 0;
 }
@@ -813,7 +813,6 @@ page_check(void)
 	assert(page_alloc(&pp0) == 0);
 	assert(page_alloc(&pp1) == 0);
 	assert(page_alloc(&pp2) == 0);
-    dprintk("pp0=%p, pp1=%p, pp2=%p\n", pp0, pp1, pp2);
 
 	assert(pp0);
 	assert(pp1 && pp1 != pp0);

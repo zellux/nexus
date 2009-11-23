@@ -74,6 +74,7 @@ sys_env_destroy(envid_t envid)
 static void
 sys_yield(void)
 {
+    MAGIC_BREAK;
 	sched_yield();
 }
 
@@ -307,30 +308,47 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     
     curenv->env_syscalls ++;
     dprintk("syscall no=%d, a1=0x%08x, a2=0x%08x, a3=0x%08x\n", syscallno, a1, a2, a3);
-    dump_va_mapping(curenv->env_pgdir, (unsigned) syscall);
-    dump_va_mapping(curenv->env_pgdir, (unsigned) user_mem_check);
+    /* dump_va_mapping(curenv->env_pgdir, (unsigned) syscall); */
+    /* dump_va_mapping(curenv->env_pgdir, (unsigned) user_mem_check); */
     tlbflush();
     
     switch (syscallno) {
     case SYS_cputs:
-        MAGIC_BREAK;
         sys_cputs((const char *) a1, a2);
         return 0;
     case SYS_cgetc:
         return sys_cgetc();
     case SYS_getenvid:
         ret = sys_getenvid();
-        dprintk("%x\n", ret);
-        MAGIC_BREAK;
         return ret;
     case SYS_env_destroy:
         return sys_env_destroy(curenv->env_id);
     case SYS_dump_env:
         return sys_dump_env();
     case SYS_yield:
-        return sys_yield();
+        sys_yield();
     }
     
 	panic("syscall not implemented");
+}
+
+int32_t
+do_sysenter(struct Trapframe *tf)
+{
+    struct PushRegs *r = &tf->tf_regs;
+    int32_t ret;
+
+    print_trapframe(tf);
+    ret = syscall(r->reg_eax, r->reg_edx, r->reg_ecx, r->reg_ebx, r->reg_edi, 0);
+    MAGIC_BREAK; 
+    asm volatile("movl %0, %%esp\n\t"
+                 "popa\n\t"
+                 "popl %%ds\n\t"
+                 "popl %%es\n\t"
+                 "sysexit\n\t"
+                 :
+                 : "g" (tf)
+                 );
+    return 0;
 }
 
