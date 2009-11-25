@@ -23,6 +23,7 @@ sys_cputs(const char *s, size_t len)
 	// Destroy the environment if not.
     user_mem_assert(curenv, s, len, PTE_U);
 
+    MAGIC_BREAK;
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
 }
@@ -339,8 +340,11 @@ do_sysenter(struct Trapframe *tf)
     int32_t ret;
 
     print_trapframe(tf);
+    curenv->env_tf = *tf;
     ret = syscall(r->reg_eax, r->reg_edx, r->reg_ecx, r->reg_ebx, r->reg_edi, 0);
-    MAGIC_BREAK; 
+    tf->tf_regs.reg_ecx = tf->tf_regs.reg_ebp;
+    tf->tf_regs.reg_edx = tf->tf_regs.reg_esi;
+    MAGIC_BREAK;
     asm volatile("movl %0, %%esp\n\t"
                  "popa\n\t"
                  "popl %%ds\n\t"

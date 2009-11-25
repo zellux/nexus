@@ -24,7 +24,7 @@ sched_yield(void)
     int i;
 
     for (i = 1; i < NENV; i++) {
-        if (&envs[i] == curenv)
+        if (&envs[i] == curenv) 
             continue;
         if (envs[i].env_status == ENV_RUNNABLE) {
             dprintk("Now switch to env[%d]\n", i);

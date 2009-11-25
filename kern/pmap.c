@@ -754,11 +754,11 @@ static uintptr_t user_mem_check_addr;
 int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
-    unsigned start = ROUNDDOWN((unsigned) va, PGSIZE);
-    unsigned end = ROUNDUP((unsigned) va + len, PGSIZE);
+    uintptr_t vaddr = (uintptr_t) va;
+    unsigned start = ROUNDDOWN(vaddr, PGSIZE);
+    unsigned end = ROUNDUP(vaddr + len, PGSIZE);
     pte_t *pte;
     unsigned flags;
-    uintptr_t vaddr = (uintptr_t) va;
     
     if (env->env_tf.tf_cs == GD_KT) {
         return 0;

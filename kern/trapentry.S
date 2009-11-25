@@ -106,8 +106,8 @@ sysenter_handler:
 //		pushl %esi /* return pc */
 //		pushl %ebp /* return esp */
 
-		movl %ebp, %ecx
-		movl %esi, %edx
+//		movl %ebp, %ecx
+//		movl %esi, %edx
 		
 		pushl %ss
 		pushl %ebp
