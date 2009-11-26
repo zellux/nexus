@@ -21,14 +21,22 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
     struct Env *e;
-    int i;
 
-    for (i = 1; i < NENV; i++) {
-        if (&envs[i] == curenv) 
-            continue;
-        if (envs[i].env_status == ENV_RUNNABLE) {
-            dprintk("Now switch to env[%d]\n", i);
-            env_run(&envs[i]);
+    if (curenv == NULL)
+        curenv = &envs[0];
+    
+    for (e = curenv + 1; e < &envs[NENV]; e++) {
+        if (e->env_status == ENV_RUNNABLE) {
+            dprintk("Now switch to env[%d]\n", e->env_id);
+            env_run(e);
+            return;
+        }
+    }
+
+    for (e = &envs[1]; e <= curenv; e++) {
+        if (e->env_status == ENV_RUNNABLE) {
+            dprintk("Now switch to env[%d]\n", e->env_id);
+            env_run(e);
             return;
         }
     }
