@@ -53,7 +53,6 @@ i386_init(void)
 	// Touch all you want.
 	ENV_CREATE(user_yield);
 #endif // TEST*
-	ENV_CREATE(user_yield);
 
 	// Schedule and run the first user environment!
 	sched_yield();

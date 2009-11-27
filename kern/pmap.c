@@ -760,9 +760,9 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
     pte_t *pte;
     unsigned flags;
     
-    if (env->env_tf.tf_cs == GD_KT) {
-        return 0;
-    }
+    /* if (env->env_tf.tf_cs == GD_KT) { */
+    /*     return 0; */
+    /* } */
     
     if (vaddr > ULIM) {
         user_mem_check_addr = vaddr;

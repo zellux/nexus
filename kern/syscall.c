@@ -91,7 +91,17 @@ sys_exofork(void)
 	// will appear to return 0.
 	
 	// LAB 4: Your code here.
-	panic("sys_exofork not implemented");
+    struct Env *e;
+
+    if (env_alloc(&e, curenv->env_id)) {
+        panic("sys_exofork: no more env available.");
+    }
+
+    e->env_tf = curenv->env_tf;
+    e->env_tf.tf_regs.reg_eax = 0;
+    e->env_status = ENV_NOT_RUNNABLE;
+
+    return e->env_id;
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
@@ -111,7 +121,17 @@ sys_env_set_status(envid_t envid, int status)
 	// envid's status.
 	
 	// LAB 4: Your code here.
-	panic("sys_env_set_status not implemented");
+    struct Env *e;
+    int ret;
+
+
+    if ((ret = envid2env(envid, &e, 1)))
+        return ret;
+
+    if ((status != ENV_RUNNABLE) && (status != ENV_NOT_RUNNABLE))
+        return -E_INVAL;
+    
+    return 0;
 }
 
 // Set envid's trap frame to 'tf'.
@@ -172,6 +192,32 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   allocated!
 
 	// LAB 4: Your code here.
+    struct Env *e;
+    int ret;
+    uintptr_t vaddr = (uintptr_t) va;
+    struct Page *pp;
+
+    if (!(perm & PTE_P) || !(perm & PTE_U) ||
+        (perm & (PTE_PWT | PTE_PCD | PTE_A | PTE_D | PTE_PS | PTE_MBZ))) {
+        dprintk("sys_page_alloc: perm is inappropriate.\n");
+        return -E_INVAL;
+    }
+
+    if ((vaddr >= UTOP) || (vaddr % PGSIZE != 0)) {
+        dprintk("sys_page_alloc: incorrect virual address.\n");
+        return -E_INVAL;
+    }
+
+    if ((ret = envid2env(envid, &e, 1)))
+        return ret;
+
+    if (page_alloc(&pp)) {
+        dprintk("sys_page_alloc: no more free memory.\n");
+        return -E_NO_MEM;
+    }
+
+    page_insert(e->env_pgdir, pp, va, perm);
+                
 	panic("sys_page_alloc not implemented");
 }
 
@@ -307,7 +353,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     int32_t ret;
     
     curenv->env_syscalls ++;
-    dprintk("syscall no=%d, a1=0x%08x, a2=0x%08x, a3=0x%08x\n", syscallno, a1, a2, a3);
+    dprintk("syscall no=%d, a1 %08x, a2 %08x, a3 %08x, a4 %08x a5 %08x\n",
+            syscallno, a1, a2, a3, a4, a5);
     /* dump_va_mapping(curenv->env_pgdir, (unsigned) syscall); */
     /* dump_va_mapping(curenv->env_pgdir, (unsigned) user_mem_check); */
     tlbflush();
@@ -337,6 +384,7 @@ do_sysenter(struct Trapframe *tf)
 {
     struct PushRegs *r = &tf->tf_regs;
     int32_t ret;
+    int *a5ptr;
 
     curenv->env_tf = *tf;
 	curenv->env_tf.tf_ds = GD_UD | 3;
@@ -344,10 +392,13 @@ do_sysenter(struct Trapframe *tf)
 	curenv->env_tf.tf_ss = GD_UD | 3;
 	curenv->env_tf.tf_cs = GD_UT | 3;
     curenv->env_tf.tf_esp = tf->tf_regs.reg_ebp;
+
+    a5ptr = (int *) curenv->env_tf.tf_esp;
+    user_mem_assert(curenv, (const void *) a5ptr, 4, PTE_U);
     /* print_trapframe(&curenv->env_tf); */
     
     /* MAGIC_BREAK; */
-    ret = syscall(r->reg_eax, r->reg_edx, r->reg_ecx, r->reg_ebx, r->reg_edi, 0);
+    ret = syscall(r->reg_eax, r->reg_edx, r->reg_ecx, r->reg_ebx, r->reg_edi, *a5ptr);
 
     /* Prepare for sysexit  */
     tf->tf_regs.reg_ecx = tf->tf_regs.reg_ebp;

@@ -16,29 +16,25 @@ syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// potentially change the condition codes and arbitrary
 	// memory locations.
 
-    asm volatile("pushl %%ecx\n\t"
-                 "pushl %%edx\n\t"
-                 "pushl %%ebx\n\t"
+    asm volatile(
                  "pushl %%ebp\n\t"
                  "pushl %%esi\n\t"
-                 "pushl %%edi\n\t"
+                 "pushl %6\n\t"
                  "movl $1f, %%esi\n\t"
                  "movl %%esp, %%ebp\n\t"
                  "nop\n\t"
                  "sysenter\n\t"
                  "1:\n\t"
-                 "popl %%edi\n\t"
+                 "popl %%esi\n\t"
                  "popl %%esi\n\t"
                  "popl %%ebp\n\t"
-                 "popl %%ebx\n\t"
-                 "popl %%edx\n\t"
-                 "popl %%ecx\n\t"
                  : "=a" (ret)
                  : "a" (num),
                    "d" (a1),
                    "c" (a2),
                    "b" (a3),
-                   "D" (a4)
+                   "D" (a4),
+                   "m" (a5)
                  : "cc", "memory");
 
 	if(check && ret > 0)
