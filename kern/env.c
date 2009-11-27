@@ -304,7 +304,8 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
             ph ++;
             continue;
         }
-        dprintk("segment: va %08x filesz %08x memsz %08x\n", ph->p_va, ph->p_filesz, ph->p_memsz);
+        /* dprintk("segment: va %08x filesz %08x memsz %08x\n", */
+        /*         ph->p_va, ph->p_filesz, ph->p_memsz); */
         segment_alloc(e, (void *) ph->p_va, ph->p_memsz);
         lcr3(e->env_cr3);
         if (ph->p_filesz >= ph->p_memsz) {

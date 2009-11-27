@@ -194,9 +194,9 @@ i386_vm_init(void)
 	// particular, we can now map memory using boot_map_segment or page_insert
 	page_init();
 
-    check_page_alloc();
+    /* check_page_alloc(); */
 
-	page_check();
+	/* page_check(); */
 
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory 

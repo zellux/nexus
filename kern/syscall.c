@@ -13,6 +13,24 @@
 #include <kern/sched.h>
 #include <kern/kdebug.h>
 
+char *syscall_names[] = {
+	"cputs",
+	"cgetc",
+	"getenvid",
+	"env_destroy",
+	"page_alloc",
+	"page_map",
+	"page_unmap",
+	"exofork",
+	"env_set_status",
+	"env_set_trapframe",
+	"env_set_pgfault_upcall",
+	"yield",
+	"ipc_try_send",
+	"ipc_recv",
+    "dump_env",
+};
+
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
 // Destroys the environment on memory errors.
@@ -124,13 +142,13 @@ sys_env_set_status(envid_t envid, int status)
     struct Env *e;
     int ret;
 
-
     if ((ret = envid2env(envid, &e, 1)))
         return ret;
 
     if ((status != ENV_RUNNABLE) && (status != ENV_NOT_RUNNABLE))
         return -E_INVAL;
-    
+
+    e->env_status = ENV_RUNNABLE;
     return 0;
 }
 
@@ -215,10 +233,12 @@ sys_page_alloc(envid_t envid, void *va, int perm)
         dprintk("sys_page_alloc: no more free memory.\n");
         return -E_NO_MEM;
     }
+    memset(page2kva(pp), 0, PGSIZE);
 
-    page_insert(e->env_pgdir, pp, va, perm);
-                
-	panic("sys_page_alloc not implemented");
+    dprintk("DONE: Insert a page at va 0x%08x.\n", va);
+    ret = page_insert(e->env_pgdir, pp, va, perm);
+    dump_va_mapping(e->env_pgdir, vaddr);
+    return ret;
 }
 
 // Map the page of memory at 'srcva' in srcenvid's address space
@@ -250,7 +270,42 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	panic("sys_page_map not implemented");
+    struct Env *esrc, *edst;
+    int ret;
+    uintptr_t srcvaddr, dstvaddr;
+    pte_t *srcpte, *dstpte;
+    struct Page *pp;
+
+    if ((ret = envid2env(srcenvid, &esrc, 1)))
+        return ret;
+    if ((ret = envid2env(dstenvid, &edst, 1)))
+        return ret;
+
+    srcvaddr = (uintptr_t) srcva;
+    dstvaddr = (uintptr_t) dstva;
+    if ((srcvaddr >= UTOP) || (srcvaddr % PGSIZE != 0) ||
+        (dstvaddr >= UTOP) || (dstvaddr % PGSIZE != 0)) {
+        dprintk("sys_page_map: invalid srcva or dstva.\n");
+        return -E_INVAL;
+    }
+
+    if ((pp = page_lookup(esrc->env_pgdir, srcva, &srcpte)) == 0) {
+        dprintk("sys_page_map: 0x%08x is not mapped in src env.\n", srcvaddr);
+        return -E_INVAL;
+    }
+    
+    if (!(perm & PTE_P) || !(perm & PTE_U) ||
+        (perm & (PTE_PWT | PTE_PCD | PTE_A | PTE_D | PTE_PS | PTE_MBZ))) {
+        dprintk("sys_page_map: perm is inappropriate.\n");
+        return -E_INVAL;
+    }
+
+    if ((perm & PTE_W) && !((*srcpte) & PTE_W)) {
+        dprintk("sys_page_map: do not allow write.\n");
+        return -E_INVAL;
+    }
+
+    return page_insert(edst->env_pgdir, pp, dstva, perm);
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -266,7 +321,20 @@ sys_page_unmap(envid_t envid, void *va)
 	// Hint: This function is a wrapper around page_remove().
 	
 	// LAB 4: Your code here.
-	panic("sys_page_unmap not implemented");
+    int ret;
+    struct Env *e;
+    uintptr_t vaddr;
+
+    if ((ret = envid2env(envid, &e, 1)))
+        return ret;
+
+    vaddr = (uintptr_t) va;
+    if ((vaddr >= UTOP) || (vaddr % PGSIZE != 0)) {
+        return -E_INVAL;
+    }
+
+    page_remove(e->env_pgdir, va);
+    return 0;
 }
 
 // Try to send 'value' to the target env 'envid'.
@@ -353,8 +421,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     int32_t ret;
     
     curenv->env_syscalls ++;
-    dprintk("syscall no=%d, a1 %08x, a2 %08x, a3 %08x, a4 %08x a5 %08x\n",
-            syscallno, a1, a2, a3, a4, a5);
+    dprintk("%s, a1 %08x, a2 %08x, a3 %08x, a4 %08x a5 %08x\n",
+            syscall_names[syscallno], a1, a2, a3, a4, a5);
     /* dump_va_mapping(curenv->env_pgdir, (unsigned) syscall); */
     /* dump_va_mapping(curenv->env_pgdir, (unsigned) user_mem_check); */
     tlbflush();
@@ -374,6 +442,17 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_dump_env();
     case SYS_yield:
         sys_yield();
+        return 0;
+    case SYS_exofork:
+        return sys_exofork();
+    case SYS_env_set_status:
+        return sys_env_set_status(a1, a2);
+    case SYS_page_alloc:
+        return sys_page_alloc(a1, (void *) a2, a3);
+    case SYS_page_map:
+        return sys_page_map(a1, (void *) a2, a3, (void *) a4, a5);
+    case SYS_page_unmap:
+        return sys_page_unmap(a1, (void *) a2);
     }
     
 	panic("syscall not implemented");
