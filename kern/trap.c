@@ -179,7 +179,7 @@ trap_dispatch(struct Trapframe *tf)
 void
 trap(struct Trapframe *tf)
 {
-	cprintf("Incoming TRAP frame at %p\n", tf);
+	cprintf("Incoming TRAP frame(%s) at %p\n", trapname(tf->tf_trapno), tf);
 
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
@@ -214,10 +214,12 @@ page_fault_handler(struct Trapframe *tf)
 	fault_va = rcr2();
 
 	cprintf("[%08x] user fault va %08x ip %08x\n",
-		curenv->env_id, fault_va, tf->tf_eip);
+            curenv->env_id, fault_va, tf->tf_eip);
+    /* print_trapframe(tf); */
 
 	// Handle kernel-mode page faults.
     if (tf->tf_cs == GD_KT) {
+        dump_va_mapping(curenv->env_pgdir, fault_va);
         panic("page fault at kernel mode");
     }
 
@@ -288,8 +290,9 @@ tf_handler_default(struct Trapframe *tf)
     int retval;
     
     if (tf->tf_trapno == T_SYSCALL) {
-        retval = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
-                tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+        retval = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx,
+                         tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx,
+                         tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
         tf->tf_regs.reg_eax = retval;
         return;
     }

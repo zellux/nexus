@@ -29,6 +29,7 @@ char *syscall_names[] = {
 	"ipc_try_send",
 	"ipc_recv",
     "dump_env",
+    "debug_va_mapping",
 };
 
 // Print a string to the system console.
@@ -245,6 +246,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
     ret = page_insert(e->env_pgdir, pp, va, perm);
     dump_va_mapping(e->env_pgdir, vaddr);
     dprintk("[DONE]: Insert a page at va 0x%08x.\n", va);
+    tlbflush();
     return ret;
 }
 
@@ -283,6 +285,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
     pte_t *srcpte, *dstpte;
     struct Page *pp;
 
+    /* TODO: should we increase pp->ref_count? */
     if ((ret = envid2env(srcenvid, &esrc, 1)))
         return ret;
     if ((ret = envid2env(dstenvid, &edst, 1)))
@@ -312,7 +315,9 @@ sys_page_map(envid_t srcenvid, void *srcva,
         return -E_INVAL;
     }
 
-    return page_insert(edst->env_pgdir, pp, dstva, perm);
+    ret = page_insert(edst->env_pgdir, pp, dstva, perm);
+    tlbflush();
+    return ret;
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -341,6 +346,7 @@ sys_page_unmap(envid_t envid, void *va)
     }
 
     page_remove(e->env_pgdir, va);
+    tlbflush();
     return 0;
 }
 
@@ -419,6 +425,26 @@ sys_dump_env()
     return 0;
 }
 
+static int
+sys_debug_va_mapping(uintptr_t va)
+{
+	pte_t *pt, pte;
+    pde_t *pd, pde;
+
+    pd = curenv->env_pgdir;
+
+    cprintf("[DEBUG] pgdir=%p, va=%p\n", pd, va);
+    pde = pd[PDX(va)];
+	if (!(pde & PTE_P)) {
+        cprintf("[DEBUG] page directory entry not present.\n");
+		return 0;
+    }
+    pt = (pte_t *) KADDR(PTE_ADDR(pde));
+    pte = pt[PTX(va)];
+	cprintf("[DEBUG] pde=%p, pte=%p\n", pde, pte);
+    return 0;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -428,12 +454,11 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     int32_t ret;
     
     curenv->env_syscalls ++;
-    dprintk("[SYSCALL] %s, a1 %08x, a2 %08x, a3 %08x, a4 %08x a5 %08x\n",
-            syscall_names[syscallno], a1, a2, a3, a4, a5);
+    /* dprintk("[SYSCALL] %s, a1 %08x, a2 %08x, a3 %08x, a4 %08x a5 %08x\n", */
+    /*         syscall_names[syscallno], a1, a2, a3, a4, a5); */
     /* dump_va_mapping(curenv->env_pgdir, (unsigned) syscall); */
     /* dump_va_mapping(curenv->env_pgdir, (unsigned) user_mem_check); */
-    tlbflush();
-    
+
     switch (syscallno) {
     case SYS_cputs:
         sys_cputs((const char *) a1, a2);
@@ -450,6 +475,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     case SYS_yield:
         sys_yield();
         return 0;
+    case SYS_debug_va_mapping:
+        return sys_debug_va_mapping(a1);
     case SYS_exofork:
         return sys_exofork();
     case SYS_env_set_status:

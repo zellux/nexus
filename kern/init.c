@@ -51,7 +51,7 @@ i386_init(void)
 	ENV_CREATE2(TEST, TESTSIZE);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_faultalloc);
+	ENV_CREATE(user_forktree);
 #endif // TEST*
 
 	// Schedule and run the first user environment!

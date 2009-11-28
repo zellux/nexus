@@ -128,3 +128,9 @@ sys_dump_env(void)
 {
     return syscall(SYS_dump_env, 0, 0, 0, 0, 0, 0);
 }
+
+int
+sys_debug_va_mapping(uint32_t va)
+{
+    return syscall(SYS_debug_va_mapping, 0, va, 0, 0, 0, 0);
+}

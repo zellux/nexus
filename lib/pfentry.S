@@ -65,7 +65,7 @@ _pgfault_upcall:
 	//
 	// LAB 4: Your code here.
 
-//	xchg %bx, %bx
+	// xchg %bx, %bx
 	nop
 	// %eax saves trap-time esp
 	movl 48(%esp), %eax

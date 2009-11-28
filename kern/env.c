@@ -324,7 +324,7 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 	// at virtual address USTACKTOP - PGSIZE.
 
     segment_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
- dprintk("load_icode finished.\n");
+    dprintk("load_icode finished.\n");
 }
 
 //
