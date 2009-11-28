@@ -253,11 +253,10 @@ page_fault_handler(struct Trapframe *tf)
     struct UTrapframe *utf;
     uint32_t uesp = curenv->env_tf.tf_esp;
 
-    if (curenv->env_pgfault_upcall == NULL)
+    if (curenv->env_pgfault_upcall == NULL) {
+        print_trapframe(tf);
         env_destroy(curenv);
-
-    user_mem_assert(curenv, curenv->env_pgfault_upcall, 4, PTE_U);
-    /* MAGIC_BREAK; */
+    }
 
     if ((uesp >= UXSTACKTOP - PGSIZE) && (uesp < UXSTACKTOP)) {
         /* nested page fault */
@@ -266,6 +265,11 @@ page_fault_handler(struct Trapframe *tf)
     } else {
         curenv->env_tf.tf_esp = UXSTACKTOP - sizeof(struct UTrapframe);
     }
+
+    user_mem_assert(curenv, curenv->env_pgfault_upcall, 4, PTE_U);
+    user_mem_assert(curenv, (void *) (curenv->env_tf.tf_esp - 4), PGSIZE, PTE_U);
+    /* MAGIC_BREAK; */
+
     utf = (struct UTrapframe *) curenv->env_tf.tf_esp;
     utf->utf_fault_va = fault_va;
     utf->utf_err = tf->tf_err;
