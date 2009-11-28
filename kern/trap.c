@@ -123,6 +123,18 @@ print_trapframe(struct Trapframe *tf)
 }
 
 void
+print_utrapframe(struct UTrapframe *tf)
+{
+	cprintf("UTrapframe at %p\n", tf);
+	cprintf("  fva  0x%08x\n", tf->utf_fault_va);
+	cprintf("  err  0x%08x\n", tf->utf_err);
+	print_regs(&tf->utf_regs);
+	cprintf("  eip  0x%08x\n", tf->utf_eip);
+	cprintf("  flag 0x%08x\n", tf->utf_eflags);
+	cprintf("  esp  0x%08x\n", tf->utf_esp);
+}
+
+void
 print_regs(struct PushRegs *regs)
 {
 	cprintf("  edi  0x%08x\n", regs->reg_edi);
@@ -190,7 +202,6 @@ trap(struct Trapframe *tf)
 		env_run(curenv);
 	else
 		sched_yield();
-
 }
 
 
@@ -239,11 +250,32 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 	
 	// LAB 4: Your code here.
+    struct UTrapframe *utf;
+    uint32_t uesp = curenv->env_tf.tf_esp;
 
-	// Destroy the environment that caused the fault.
-	print_trapframe(tf);
-    MAGIC_BREAK;
-	env_destroy(curenv);
+    if (curenv->env_pgfault_upcall == NULL)
+        env_destroy(curenv);
+
+    user_mem_assert(curenv, curenv->env_pgfault_upcall, 4, PTE_U);
+    /* MAGIC_BREAK; */
+
+    if ((uesp >= UXSTACKTOP - PGSIZE) && (uesp < UXSTACKTOP)) {
+        /* nested page fault */
+        curenv->env_tf.tf_esp = uesp - 4 - sizeof(struct UTrapframe);
+        * (int *) (uesp - 4) = MAGIC_BLANK;
+    } else {
+        curenv->env_tf.tf_esp = UXSTACKTOP - sizeof(struct UTrapframe);
+    }
+    utf = (struct UTrapframe *) curenv->env_tf.tf_esp;
+    utf->utf_fault_va = fault_va;
+    utf->utf_err = tf->tf_err;
+    utf->utf_regs = tf->tf_regs;
+    utf->utf_eip = tf->tf_eip;
+    utf->utf_eflags = tf->tf_eflags;
+    utf->utf_esp = uesp;
+    /* print_utrapframe(utf); */
+
+    curenv->env_tf.tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
 }
 
 void

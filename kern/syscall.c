@@ -180,7 +180,14 @@ static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
 	// LAB 4: Your code here.
-	panic("sys_env_set_pgfault_upcall not implemented");
+    int ret;
+    struct Env *e;
+    
+    if ((ret = envid2env(envid, &e, 1)))
+        return ret;
+
+    e->env_pgfault_upcall = func;
+    return 0;
 }
 
 // Allocate a page of memory and map it at 'va' with permission
@@ -235,9 +242,9 @@ sys_page_alloc(envid_t envid, void *va, int perm)
     }
     memset(page2kva(pp), 0, PGSIZE);
 
-    dprintk("DONE: Insert a page at va 0x%08x.\n", va);
     ret = page_insert(e->env_pgdir, pp, va, perm);
     dump_va_mapping(e->env_pgdir, vaddr);
+    dprintk("[DONE]: Insert a page at va 0x%08x.\n", va);
     return ret;
 }
 
@@ -421,7 +428,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     int32_t ret;
     
     curenv->env_syscalls ++;
-    dprintk("%s, a1 %08x, a2 %08x, a3 %08x, a4 %08x a5 %08x\n",
+    dprintk("[SYSCALL] %s, a1 %08x, a2 %08x, a3 %08x, a4 %08x a5 %08x\n",
             syscall_names[syscallno], a1, a2, a3, a4, a5);
     /* dump_va_mapping(curenv->env_pgdir, (unsigned) syscall); */
     /* dump_va_mapping(curenv->env_pgdir, (unsigned) user_mem_check); */
@@ -453,6 +460,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_page_map(a1, (void *) a2, a3, (void *) a4, a5);
     case SYS_page_unmap:
         return sys_page_unmap(a1, (void *) a2);
+    case SYS_env_set_pgfault_upcall:
+        return sys_env_set_pgfault_upcall(a1, (void *) a2);
     }
     
 	panic("syscall not implemented");
@@ -484,6 +493,7 @@ do_sysenter(struct Trapframe *tf)
     tf->tf_regs.reg_edx = tf->tf_regs.reg_esi;
     tf->tf_regs.reg_eax = ret;
     
+    /* MAGIC_BREAK; */
     asm volatile("movl %0, %%esp\n\t"
                  "popa\n\t"
                  "popl %%ds\n\t"
