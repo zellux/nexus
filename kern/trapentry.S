@@ -33,6 +33,7 @@
     .type  name, @function;    /* symbol type is function */  \
     .align 2;        /* align function definition */          \
 name:            /* function starts here */                   \
+ cli;                                                         \
  pushl $(num);                                                \
  jmp _alltraps
 
@@ -45,6 +46,7 @@ name:            /* function starts here */                   \
     .type name, @function;                        \
     .align 2;                                     \
 name:                                             \
+ cli;                                             \
  pushl $0;                                        \
  pushl $(num);                                    \
  jmp _alltraps
@@ -74,6 +76,7 @@ TRAPHANDLER(trap_fperr, 16);
 TRAPHANDLER(trap_align, 17);
 TRAPHANDLER(trap_mchk, 18);
 TRAPHANDLER(trap_simderr, 19);
+TRAPHANDLER_NOEC(irq_clock, 32);
 
 TRAPHANDLER_NOEC(trap_syscall, 48);
 
@@ -108,7 +111,8 @@ sysenter_handler:
 
 //		movl %ebp, %ecx
 //		movl %esi, %edx
-		
+
+        cli
 		pushl %ss
 		pushl %ebp
 		pushf

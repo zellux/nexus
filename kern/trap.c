@@ -17,6 +17,7 @@ static struct Taskstate ts;
 
 void tf_handler_default(struct Trapframe *);
 void tf_handler_brkpt(struct Trapframe *);
+void irq_handler_clock(struct Trapframe *);
 
 /* Interrupt descriptor table.  (Must be built at run time because
  * shifted function addresses can't be represented in relocation records.)
@@ -76,11 +77,13 @@ idt_init(void)
     extern void trap_gpflt();
     extern void trap_pgflt();
     extern void trap_brkpt();
+    extern void irq_clock();
 
     SETGATE(idt[0], 0, GD_KT, trap_divide, 3);
     SETGATE(idt[3], 1, GD_KT, trap_brkpt, 3);
     SETGATE(idt[13], 0, GD_KT, trap_gpflt, 0);
     SETGATE(idt[14], 0, GD_KT, trap_pgflt, 0);
+    SETGATE(idt[32], 0, GD_KT, irq_clock, 0);
     SETGATE(idt[48], 1, GD_KT, trap_syscall, 3);
 
     for (i = 0; i < 256; i++) {
@@ -88,6 +91,7 @@ idt_init(void)
     }
     idt_handlers[3] = tf_handler_brkpt;
     idt_handlers[14] = page_fault_handler;
+    idt_handlers[32] = irq_handler_clock;
     
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
@@ -164,6 +168,7 @@ trap_dispatch(struct Trapframe *tf)
 		return;
 	}
 
+    /* print_trapframe(tf); */
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	/* print_trapframe(tf); */
@@ -179,7 +184,7 @@ trap_dispatch(struct Trapframe *tf)
 void
 trap(struct Trapframe *tf)
 {
-	cprintf("Incoming TRAP frame(%s) at %p\n", trapname(tf->tf_trapno), tf);
+	/* cprintf("Incoming TRAP frame(%s) at %p\n", trapname(tf->tf_trapno), tf); */
 
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
@@ -311,3 +316,13 @@ tf_handler_brkpt(struct Trapframe *tf)
 {
     monitor(tf);
 }
+
+void
+irq_handler_clock(struct Trapframe *tf)
+{
+    if (tf->tf_cs == GD_KT) {
+        panic("Timer interrupt at kernel");
+    }
+    sched_yield();
+}
+

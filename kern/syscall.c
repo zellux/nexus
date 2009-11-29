@@ -79,6 +79,7 @@ sys_env_destroy(envid_t envid)
 	int r;
 	struct Env *e;
 
+    dprintk("[SYSCALL] [%08x] kills [%08x]\n", curenv->env_id, envid);
 	if ((r = envid2env(envid, &e, 1)) < 0)
 		return r;
 	if (e == curenv)
@@ -469,7 +470,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         ret = sys_getenvid();
         return ret;
     case SYS_env_destroy:
-        return sys_env_destroy(curenv->env_id);
+        return sys_env_destroy(a1);
     case SYS_dump_env:
         return sys_dump_env();
     case SYS_yield:
@@ -525,6 +526,7 @@ do_sysenter(struct Trapframe *tf)
                  "popa\n\t"
                  "popl %%ds\n\t"
                  "popl %%es\n\t"
+                 "sti\n\t"
                  "sysexit\n\t"
                  :
                  : "g" (tf)
