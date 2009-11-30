@@ -389,7 +389,45 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+    struct Env *e;
+    uintptr_t srcvaddr;
+    struct Page *srcpp, *dstpp;
+
+    if (envid2env(envid, &e, 0)) {
+        return -E_BAD_ENV;
+    }
+
+    if (!e->env_ipc_recving) {
+        return -E_IPC_NOT_RECV;
+    }
+
+    srcvaddr = (uintptr_t) srcva;
+    if (srcvaddr < UTOP && (uintptr_t) e->env_ipc_dstva < UTOP) {
+        if (srcvaddr % PGSIZE != 0)
+            return -E_INVAL;
+        if (!(perm & PTE_P) || !(perm & PTE_U) ||
+            (perm & (PTE_PWT | PTE_PCD | PTE_A | PTE_D | PTE_PS | PTE_MBZ)))
+            return -E_INVAL;
+        if (user_mem_check(curenv, srcva, PGSIZE, PTE_P|PTE_U))
+            return -E_INVAL;
+        /* TODO: what if the receiver don't assume a page transfer? */
+        if (sys_page_alloc(envid, e->env_ipc_dstva, PTE_U|PTE_W|PTE_P))
+            return -E_NO_MEM;
+        srcpp = page_lookup(curenv->env_pgdir, srcva, 0);
+        dstpp = page_lookup(e->env_pgdir, e->env_ipc_dstva, 0);
+        memmove((void *) page2kva(dstpp), (const void *) page2kva(srcpp), PGSIZE);
+        e->env_ipc_perm = perm;
+    } else {
+        e->env_ipc_perm = 0;
+    }
+    dprintk("[IPC] [%08x] send %d to [%08x]\n", curenv->env_id, value, envid);
+    e->env_ipc_recving = 0;
+    e->env_ipc_from = curenv->env_id;
+    e->env_ipc_value = value;
+    e->env_status = ENV_RUNNABLE;
+    e->env_tf.tf_regs.reg_eax = 0;
+
+    return (e->env_ipc_perm != 0);
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -407,7 +445,18 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+    uintptr_t dstvaddr = (uintptr_t) dstva;
+    
+    curenv->env_ipc_dstva = (void *) -1;
+    if (dstvaddr < UTOP) {
+        if (dstvaddr % PGSIZE != 0)
+            return -E_INVAL;
+        curenv->env_ipc_dstva = dstva;
+    }
+    curenv->env_ipc_recving = 1;
+    curenv->env_status = ENV_NOT_RUNNABLE;
+    sched_yield();
+    
 	return 0;
 }
 
@@ -490,6 +539,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_page_unmap(a1, (void *) a2);
     case SYS_env_set_pgfault_upcall:
         return sys_env_set_pgfault_upcall(a1, (void *) a2);
+    case SYS_ipc_recv:
+        return sys_ipc_recv((void *) a1);
+    case SYS_ipc_try_send:
+        return sys_ipc_try_send(a1, a2, (void *) a3, a4);
     }
     
 	panic("syscall not implemented");

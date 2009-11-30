@@ -176,6 +176,7 @@ fork(void)
         sys_env_set_pgfault_upcall(envid, _pgfault_upcall);
         sys_env_set_status(envid, ENV_RUNNABLE);
     } else {
+		env = &envs[ENVX(sys_getenvid())];
     }
     
     return envid;

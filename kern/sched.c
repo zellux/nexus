@@ -27,7 +27,7 @@ sched_yield(void)
     
     for (e = curenv + 1; e < &envs[NENV]; e++) {
         if (e->env_status == ENV_RUNNABLE) {
-            dprintk("Now switch to env[%d]\n", e->env_id);
+            dprintk("Now switch to env[%08x]\n", e->env_id);
             env_run(e);
             return;
         }
@@ -35,7 +35,7 @@ sched_yield(void)
 
     for (e = &envs[1]; e <= curenv; e++) {
         if (e->env_status == ENV_RUNNABLE) {
-            dprintk("Now switch to env[%d]\n", e->env_id);
+            dprintk("Now switch to env[%08x]\n", e->env_id);
             env_run(e);
             return;
         }
