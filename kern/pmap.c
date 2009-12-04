@@ -178,13 +178,13 @@ i386_vm_init(void)
 	// You must allocate the array yourself.
 	// Your code goes here: 
 
-    pages = (struct Page *) boot_freemem;
+    pages = (struct Page *) ROUNDUP(boot_freemem, PGSIZE);
     boot_freemem += sizeof(struct Page) * npage;
 
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
-    envs = (struct Env *) boot_freemem;
+    envs = (struct Env *) ROUNDUP(boot_freemem, PGSIZE);
     boot_freemem += sizeof(struct Env) * NENV;
 
 	//////////////////////////////////////////////////////////////////////
@@ -194,9 +194,9 @@ i386_vm_init(void)
 	// particular, we can now map memory using boot_map_segment or page_insert
 	page_init();
 
-    /* check_page_alloc(); */
+    check_page_alloc();
 
-	/* page_check(); */
+	page_check();
 
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory 
@@ -379,8 +379,11 @@ check_boot_pgdir(void)
 	
 	// check envs array (new test for lab 3)
 	n = ROUNDUP(NENV*sizeof(struct Env), PGSIZE);
-	for (i = 0; i < n; i += PGSIZE)
+	for (i = 0; i < n; i += PGSIZE) {
+        cprintf("%d envs=%p UENVS=%p\n", i, envs, UENVS);
+        dump_va_mapping(pgdir, UENVS+i);
 		assert(check_va2pa(pgdir, UENVS + i) == PADDR(envs) + i);
+    }
 
 	// check phys mem
 	for (i = 0; i < npage * PGSIZE; i += PGSIZE)
