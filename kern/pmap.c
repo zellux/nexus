@@ -379,11 +379,8 @@ check_boot_pgdir(void)
 	
 	// check envs array (new test for lab 3)
 	n = ROUNDUP(NENV*sizeof(struct Env), PGSIZE);
-	for (i = 0; i < n; i += PGSIZE) {
-        cprintf("%d envs=%p UENVS=%p\n", i, envs, UENVS);
-        dump_va_mapping(pgdir, UENVS+i);
+	for (i = 0; i < n; i += PGSIZE)
 		assert(check_va2pa(pgdir, UENVS + i) == PADDR(envs) + i);
-    }
 
 	// check phys mem
 	for (i = 0; i < npage * PGSIZE; i += PGSIZE)
