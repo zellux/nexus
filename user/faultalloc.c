@@ -13,6 +13,7 @@ handler(struct UTrapframe *utf)
 				PTE_P|PTE_U|PTE_W)) < 0)
 		panic("allocating at %x in page fault handler: %e", addr, r);
 	snprintf((char*) addr, 100, "this string was faulted in at %x", addr);
+    /* cprintf("handler done, \"%s\"\n", addr); */
 }
 
 void

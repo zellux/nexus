@@ -27,6 +27,8 @@ forktree(const char *cur)
 	cprintf("%04x: I am '%s'\n", sys_getenvid(), cur);
 
 	forkchild(cur, '0');
+    /* sys_debug_va_mapping(0xeebfdf9c); */
+    /* asm volatile("xchg %%bx, %%bx" : :); */
 	forkchild(cur, '1');
 }
 

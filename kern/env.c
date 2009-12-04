@@ -12,6 +12,7 @@
 #include <kern/trap.h>
 #include <kern/monitor.h>
 #include <kern/sched.h>
+#include <kern/kdebug.h>
 
 struct Env *envs = NULL;		// All environments
 struct Env *curenv = NULL;	        // The current env
@@ -72,7 +73,12 @@ envid2env(envid_t envid, struct Env **env_store, bool checkperm)
 void
 env_init(void)
 {
-	// LAB 3: Your code here.
+    int i;
+
+    for (i = NENV - 1; i >= 0; i--) {
+        envs[i].env_id = 0;
+        LIST_INSERT_HEAD(&env_free_list, &envs[i], env_link);
+    }
 }
 
 //
@@ -109,8 +115,16 @@ env_setup_vm(struct Env *e)
 	//    - Note: pp_ref is not maintained for most physical pages
 	//	mapped above UTOP -- but you do need to increment
 	//	env_pgdir's pp_ref!
+    p->pp_ref ++;
+    e->env_pgdir = KADDR(page2pa(p));
+    e->env_cr3 = page2pa(p);
+    for (i = PDX(UTOP); i < NPDENTRIES; i++) {
+        e->env_pgdir[i] = boot_pgdir[i];
+    }
 
-	// LAB 3: Your code here.
+    for (i = 0; i < PDX(UTOP); i++) {
+        e->env_pgdir[i] = 0;
+    }
 
 	// VPT and UVPT map the env's own page table, with
 	// different permissions.
@@ -152,6 +166,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	e->env_parent_id = parent_id;
 	e->env_status = ENV_RUNNABLE;
 	e->env_runs = 0;
+    e->env_syscalls = 0;
 
 	// Clear out all the saved register state,
 	// to prevent the register values
@@ -173,6 +188,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
+    e->env_tf.tf_eflags |= FL_IF|FL_IOPL_MASK;
 
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
@@ -207,6 +223,20 @@ segment_alloc(struct Env *e, void *va, size_t len)
 	// Hint: It is easier to use segment_alloc if the caller can pass
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round len up.
+    int i;
+    uint32_t nva = ROUNDDOWN((uint32_t) va, PGSIZE);
+    uint32_t oldlen = len;
+    struct Page *pp;
+
+    len = ROUNDUP((unsigned) va + len, PGSIZE) - nva;
+    /* dprintk("segment_alloc [%08x, %08x) => [%08x, %08x)\n", */
+    /*         va, va + oldlen, nva, nva + len); */
+    for (i = 0; i < len; i += PGSIZE) {
+        if (page_alloc(&pp)) {
+            break;
+        }
+        page_insert(e->env_pgdir, pp, (void *) (nva + i), PTE_U|PTE_W);
+    }
 }
 
 //
@@ -263,11 +293,42 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here.
+    struct Proghdr *ph;
+    struct Elf *elf;
+    int i;
 
+    elf = (struct Elf *) binary;
+    if (elf->e_magic != ELF_MAGIC) {
+        panic("elf->magic != ELF_MAGIC.");
+    }
+
+    ph = (struct Proghdr *) (binary + elf->e_phoff);
+    for (i = 0; i < elf->e_phnum; i++) {
+        if (ph->p_type != ELF_PROG_LOAD) {
+            ph ++;
+            continue;
+        }
+        /* dprintk("segment: va %08x filesz %08x memsz %08x\n", */
+        /*         ph->p_va, ph->p_filesz, ph->p_memsz); */
+        segment_alloc(e, (void *) ph->p_va, ph->p_memsz);
+        lcr3(e->env_cr3);
+        if (ph->p_filesz >= ph->p_memsz) {
+            memmove((void *) ph->p_va, &binary[ph->p_offset], ph->p_memsz);
+        } else {
+            memset((void *) ph->p_va, 0, ph->p_memsz);
+        }
+        /* if (ph->p_va == 0x00800020) */
+        /*     MAGIC_BREAK; */
+        ph ++;
+    }
+    lcr3(boot_cr3);
+    e->env_tf.tf_eip = elf->e_entry;
+    
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
-	// LAB 3: Your code here.
+    segment_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
+    dprintk("load_icode finished.\n");
 }
 
 //
@@ -283,7 +344,10 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 void
 env_create(uint8_t *binary, size_t size)
 {
-	// LAB 3: Your code here.
+    struct Env *env;
+    
+    env_alloc(&env, 0);
+    load_icode(env, binary, size);
 }
 
 //
@@ -364,6 +428,9 @@ env_destroy(struct Env *e)
 void
 env_pop_tf(struct Trapframe *tf)
 {
+    /* dump_tf(tf); */
+    /* dump_va_mapping((pde_t *) KADDR(curenv->env_cr3), tf->tf_eip); */
+    /* MAGIC_BREAK; */
 	__asm __volatile("movl %0,%%esp\n"
 		"\tpopal\n"
 		"\tpopl %%es\n"
@@ -397,6 +464,9 @@ env_run(struct Env *e)
 	
 	// LAB 3: Your code here.
 
-        panic("env_run not yet implemented");
+    /* dprintfunc(); */
+    curenv = e;
+    lcr3((uint32_t) e->env_cr3);
+    env_pop_tf(&e->env_tf);
 }
 

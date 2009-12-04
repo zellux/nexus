@@ -6,11 +6,16 @@
 #include <kern/kdebug.h>
 #include <kern/pmap.h>
 #include <kern/env.h>
+#include <kern/trap.h>
 
 extern const struct Stab __STAB_BEGIN__[];	// Beginning of stabs table
 extern const struct Stab __STAB_END__[];	// End of stabs table
 extern const char __STABSTR_BEGIN__[];		// Beginning of string table
 extern const char __STABSTR_END__[];		// End of string table
+
+struct Trapframe;
+
+extern void print_trapframe(struct Trapframe *);
 
 struct UserStabData {
 	const struct Stab *stabs;
@@ -115,7 +120,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 {
 	const struct Stab *stabs, *stab_end;
 	const char *stabstr, *stabstr_end;
-	int lfile, rfile, lfun, rfun, lline, rline;
+	int lfile, rfile, lfun, rfun, lline, rline, lpos, rpos;
 
 	// Initialize *info
 	info->eip_file = "<unknown>";
@@ -203,8 +208,17 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	//	There's a particular stabs type used for line numbers.
 	//	Look at the STABS documentation and <inc/stab.h> to find
 	//	which one.
-	// Your code here.
-
+    if (lline <= rline) {
+        lpos = lline;
+        rpos = rline;
+        stab_binsearch(stabs, &lpos, &rpos, N_SLINE, addr);
+        if (lpos <= rpos) {
+            info->eip_line = stabs[lpos].n_desc;
+        } else {
+            cprintf("lpos=%x rpos=%x\n", lpos, rpos);
+            return -1;
+        }
+    }
 	
 	// Search backwards from the line number for the relevant filename
 	// stab.
@@ -229,3 +243,55 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	
 	return 0;
 }
+
+void
+dump_tf(struct Trapframe *tf)
+{
+    print_trapframe(tf);
+    /* dprintk("=== Dump Tranframe ===\n"); */
+    /* dprintk("cs %8.0x \tds %8.0x \tes %8.0x \tss %8.0x\n", */
+    /*         tf->tf_cs, tf->tf_ds, tf->tf_es, tf->tf_ss); */
+    /* dprintk("eip %8.0x \tesp %8.0x\n", */
+    /*         tf->tf_eip, tf->tf_esp); */
+    /* dprintk("trapno %d \teflags %8.0x\n", */
+    /*         tf->tf_trapno, tf->tf_eflags); */
+}
+    
+/** 
+ * dump information about virtual-to-physical address mapping
+ * 
+ * @param pgdir 
+ * @param va 
+ */
+void
+dump_va_mapping(pde_t *pgdir, uintptr_t va)
+{
+	pte_t *p;
+
+    dprintk("dump: pgdir=%p, va=%p\n", pgdir, va);
+	pgdir = &pgdir[PDX(va)];
+	if (!(*pgdir & PTE_P)) {
+        dprintk("      page directory entry not present.\n");
+		return;
+    }
+	p = (pte_t*) KADDR(PTE_ADDR(*pgdir));
+	if (!(p[PTX(va)] & PTE_P)) {
+        dprintk("      page table entry not present.\n");
+		return;
+    }
+	dprintk("      pde=%p, pte=%p\n", *pgdir, p[PTX(va)]);
+}
+
+void
+dump_msr()
+{
+    uint32_t v1, v2;
+
+    rdmsr(0x174, v1, v2);
+    dprintk("IA32_SYSENTER_CS   %08x\n", v1+v2);
+    rdmsr(0x175, v1, v2);
+    dprintk("IA32_SYSENTER_ESP  %08x\n", v1);
+    rdmsr(0x176, v1, v2);
+    dprintk("IA32_SYSENTER_EIP  %08x\n", v1);
+}
+
