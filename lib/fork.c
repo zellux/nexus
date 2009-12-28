@@ -102,14 +102,17 @@ duppage(envid_t envid, unsigned pn)
     ptx = PTX(addr);
     pt = (int *) ((PDX(UVPT) << PDXSHIFT) | (pdx << PTXSHIFT));
     pte = (pte_t) pt[ptx];
+    if (pte & PTE_COW) {
+        sys_page_map(0, (void *) addr, envid, (void *) addr,
+                     PTE_U|PTE_P|PTE_COW);
+        return 0;
+    }
     if ((pte & PTE_W) || (pte & PTE_COW)) {
         pte &= !PTE_W;
         pte |= PTE_COW;
     }
-    sys_page_map(0, (void *) addr, envid, (void *) addr,
-                 PTE_U|PTE_P|PTE_COW);
-    sys_page_map(0, (void *) addr, 0, (void *) addr,
-                 PTE_U|PTE_P|PTE_COW);
+    sys_page_map(0, (void *) addr, envid, (void *) addr, PTE_U|PTE_P|PTE_COW);
+    sys_page_map(0, (void *) addr, 0, (void *) addr, PTE_U|PTE_P|PTE_COW);
 	return 0;
 }
 
