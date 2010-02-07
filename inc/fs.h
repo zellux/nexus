@@ -65,13 +65,13 @@ struct Super {
 
 // Definitions for requests from clients to file system
 
-#define FSREQ_OPEN	1
-#define FSREQ_MAP	2
-#define FSREQ_SET_SIZE	3
-#define FSREQ_CLOSE	4
-#define FSREQ_DIRTY	5
-#define FSREQ_REMOVE	6
-#define FSREQ_SYNC	7
+#define FSREQ_OPEN     1
+#define FSREQ_MAP      2
+#define FSREQ_SET_SIZE 3
+#define FSREQ_CLOSE    4
+#define FSREQ_DIRTY    5
+#define FSREQ_REMOVE   6
+#define FSREQ_SYNC     7
 
 struct Fsreq_open {
 	char req_path[MAXPATHLEN];

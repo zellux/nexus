@@ -154,8 +154,25 @@ int
 alloc_block_num(void)
 {
 	// LAB 5: Your code here.
-	panic("alloc_block_num not implemented");
-	return -E_NO_DISK;
+    int i, bitnum;
+
+    for (i = 0; i < super->s_nblocks; i += 32)
+        if (bitmap[i / 32] != 0)
+            break;
+    /* TODO: Here we give up the last several disk pages */
+    if (i >= super->s_nblocks)
+        return -E_NO_DISK;
+    /* TODO: Improving performance by using clz instruction */
+    for (bitnum = 0; bitnum < 32; bitnum++) {
+        if (bitmap[i / 32] & (1 << bitnum)) {
+            cprintf("alloc_block_num: blkid<%d> is free.\n", i + bitnum);
+            bitmap[i / 32] &= ~(1 << bitnum);
+            write_block(2 + i / BLKBITSIZE);
+            return i + bitnum;
+        }
+    }
+    assert("oops, why can't I find a free block?");
+    return 0;
 }
 
 // Allocate a block -- first find a free block in the bitmap,
@@ -172,9 +189,13 @@ alloc_block(void)
 
 	// LAB 5: Your code here.
 	int r, bno;
-
-	panic("alloc_block not implemented");
-	return -E_NO_DISK;
+    
+    bno = alloc_block_num();
+    if ((r = map_block(bno))) {
+        free_block(bno);
+        return r;
+    }
+    return bno;
 }
 
 // Read and validate the file system super-block.
@@ -318,8 +339,14 @@ file_map_block(struct File *f, uint32_t filebno, uint32_t *diskbno, bool alloc)
 	int r;
 	uint32_t *ptr;
 
-	// LAB 5: Your code here. 
+	// LAB 5: Your code here.
+    
 	panic("file_map_block not implemented");
+    if (filebno >= NDIRECT) {
+        panic("filebno >= NDIRECT");
+        return -E_INVAL;
+    }
+    /* if (f->f_direct[filebno]  */
 
 	return 0;
 }
@@ -353,6 +380,8 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 	// Read in the block, leaving the pointer in *blk.
 	// Hint: Use file_map_block and read_block.
 	// LAB 5: Your code here.
+    diskbno = f->f_direct[filebno];
+    /* file_map_block */
 	panic("file_get_block not implemented");
 	
 	return 0;
