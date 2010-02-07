@@ -713,7 +713,7 @@ page_remove(pde_t *pgdir, void *va)
     pp = page_lookup(pgdir, va, &pte);
     if (!pp)
         return;
-    dprintk("[PAGE] remove page va=%p\n", va);
+    /* dprintk("[PAGE] remove page va=%p\n", va); */
     page_decref(pp);
     *pte = 0;
     tlb_invalidate(pgdir, va);

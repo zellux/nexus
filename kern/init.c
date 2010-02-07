@@ -55,7 +55,7 @@ i386_init(void)
 	ENV_CREATE2(TEST, TESTSIZE);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_idle);
+	ENV_CREATE(user_testfsipc);
 #endif // TEST*
 
 	// Schedule and run the first user environment!

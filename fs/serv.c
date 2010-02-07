@@ -322,7 +322,7 @@ void
 umain(void)
 {
 	static_assert(sizeof(struct File) == 256);
-        binaryname = "fs";
+    binaryname = "fs";
 	cprintf("FS is running\n");
 
 	// Check that we are able to do I/O

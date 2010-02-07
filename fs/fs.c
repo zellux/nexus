@@ -75,7 +75,17 @@ read_block(uint32_t blockno, char **blk)
 		panic("reading free block %08x\n", blockno);
 
 	// LAB 5: Your code here.
-	panic("read_block not implemented");
+    if (!block_is_mapped(blockno)) {
+        if ((r = map_block(blockno)))
+            return r;
+    }
+    addr = diskaddr(blockno);
+    ide_read(blockno * BLKSECTS, (void *) addr, BLKSECTS);
+    cprintf("read_block: addr = %p\n", addr);
+    if (blk) {
+        *blk = addr;
+    }
+    
 	return 0;
 }
 
@@ -93,7 +103,9 @@ write_block(uint32_t blockno)
 	
 	// Write the disk block and clear PTE_D.
 	// LAB 5: Your code here.
-	panic("write_block not implemented");
+    addr = diskaddr(blockno);
+    ide_write(blockno * BLKSECTS, (const void *) addr, BLKSECTS);
+    sys_page_map(0, (void *) addr, 0, (void *) addr, PTE_USER);
 }
 
 // Make sure this block is unmapped.
@@ -253,7 +265,7 @@ fs_init(void)
 		ide_set_disk(1);
 	else
 		ide_set_disk(0);
-	
+
 	read_super();
 	check_write_block();
 	read_bitmap();

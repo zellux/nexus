@@ -240,8 +240,8 @@ sys_page_alloc(envid_t envid, void *va, int perm)
     memset(page2kva(pp), 0, PGSIZE);
 
     ret = page_insert(e->env_pgdir, pp, va, perm);
-    dump_va_mapping(e->env_pgdir, vaddr);
-    dprintk("[DONE]: Insert a page at va 0x%08x.\n", va);
+    /* dump_va_mapping(e->env_pgdir, vaddr); */
+    /* dprintk("[DONE]: Insert a page at va 0x%08x.\n", va); */
     tlbflush();
     return ret;
 }

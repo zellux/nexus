@@ -1,7 +1,7 @@
 #include <inc/fs.h>
 #include <inc/lib.h>
 
-#define debug 0
+#define debug 1
 
 extern uint8_t fsipcbuf[PGSIZE];	// page-aligned, declared in entry.S
 
