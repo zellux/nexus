@@ -161,7 +161,7 @@ score=0
 # Reset the file system to its original, pristine state
 resetfs() {
 	rm -f obj/fs/fs.img
-	gmake obj/fs/fs.img >$out
+	gmake.sh obj/fs/fs.img >$out
 }
 
 resetfs
