@@ -303,8 +303,6 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 int
 file_map_block(struct File *f, uint32_t filebno, uint32_t *diskbno, bool alloc)
 {
-	
-
 	int r;
 	uint32_t *ptr;
 
