@@ -2,6 +2,8 @@
 
 #include "fs.h"
 
+#define dprintk(_f, _a...) cprintf("%s[%d] " _f "\n", __FUNCTION__, __LINE__, ##_a)
+
 struct Super *super;		// superblock
 uint32_t *bitmap;		// bitmap blocks mapped in memory
 
@@ -53,6 +55,7 @@ map_block(uint32_t blockno)
 {
 	if (block_is_mapped(blockno))
 		return 0;
+    dprintk("blockno %d\n", blockno);
 	return sys_page_alloc(0, diskaddr(blockno), PTE_U|PTE_P|PTE_W);
 }
 
@@ -81,7 +84,7 @@ read_block(uint32_t blockno, char **blk)
     }
     addr = diskaddr(blockno);
     ide_read(blockno * BLKSECTS, (void *) addr, BLKSECTS);
-    cprintf("read_block: addr = %p\n", addr);
+    dprintk("addr = %p\n", addr);
     if (blk) {
         *blk = addr;
     }
@@ -165,7 +168,7 @@ alloc_block_num(void)
     /* TODO: Improving performance by using clz instruction */
     for (bitnum = 0; bitnum < 32; bitnum++) {
         if (bitmap[i / 32] & (1 << bitnum)) {
-            cprintf("alloc_block_num: blkid<%d> is free.\n", i + bitnum);
+            dprintk("blkid<%d> is free.\n", i + bitnum);
             bitmap[i / 32] &= ~(1 << bitnum);
             write_block(2 + i / BLKBITSIZE);
             return i + bitnum;
@@ -311,7 +314,7 @@ fs_init(void)
 int
 file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool alloc)
 {
-	int r;
+	int r, clear;
 	uint32_t *ptr;
 	char *blk;
 
@@ -319,8 +322,35 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 	// for easier bookkeeping.
 	// Hint: Use read_block for accessing the indirect block
 	// LAB 5: Your code here.
-	panic("file_block_walk not implemented");
-	
+    if (filebno >= NINDIRECT) {
+        return -E_INVAL;
+    }
+    if (filebno < NDIRECT) {
+        *ppdiskbno = &f->f_direct[filebno];
+        return 0;
+    }
+    clear = 0;
+    if (!f->f_indirect) {
+        /* Indirect block has not been allocated yet */
+        if (!alloc) {
+            return -E_NOT_FOUND;
+        }
+        r = alloc_block();
+        if (r == -E_NO_MEM)
+            return r;
+        f->f_indirect = r;
+        clear = 1;
+    }
+    r = read_block(f->f_indirect, &blk);
+    if (r) {
+        return r;
+    }
+    ptr = (uint32_t *) blk;
+    *ppdiskbno = &ptr[filebno];
+    if (clear) {
+        /* The pointer in indirect block is uninitialized */
+        ptr[filebno] = 0;
+    }
 	return 0;
 }
 
@@ -340,14 +370,22 @@ file_map_block(struct File *f, uint32_t filebno, uint32_t *diskbno, bool alloc)
 	uint32_t *ptr;
 
 	// LAB 5: Your code here.
-    
-	panic("file_map_block not implemented");
-    if (filebno >= NDIRECT) {
-        panic("filebno >= NDIRECT");
-        return -E_INVAL;
+    r = file_block_walk(f, filebno, &ptr, alloc);
+    if (r) {
+        return r;
     }
-    /* if (f->f_direct[filebno]  */
-
+    if (*ptr == 0) {
+        r = alloc_block();
+        if (r == -E_NO_DISK)
+            return r;
+        *ptr = r;
+    }
+    if ((r = map_block(*ptr))) {
+        return r;
+    }
+    
+    *diskbno = *ptr;
+    
 	return 0;
 }
 
@@ -380,9 +418,12 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 	// Read in the block, leaving the pointer in *blk.
 	// Hint: Use file_map_block and read_block.
 	// LAB 5: Your code here.
-    diskbno = f->f_direct[filebno];
-    /* file_map_block */
-	panic("file_get_block not implemented");
+    r = file_map_block(f, filebno, &diskbno, 1);
+    dprintk("file %s, filebno %d, diskbno %d\n", f->f_name, filebno, diskbno);
+    if (r) {
+        return r;
+    }
+    read_block(diskbno, blk);
 	
 	return 0;
 }
@@ -398,7 +439,8 @@ file_dirty(struct File *f, off_t offset)
 	// it with PTE_D set.
 	// Hint: Use file_get_block
 	// LAB 5: Your code here.
-	panic("file_dirty not implemented");
+    file_get_block(f, offset / BLKSIZE, &blk);
+    ((unsigned char *volatile) blk)[0] = blk[0];
 
 	return 0;
 }
@@ -407,6 +449,7 @@ file_dirty(struct File *f, off_t offset)
 int
 dir_lookup(struct File *dir, const char *name, struct File **file)
 {
+    dprintk("name: %s", name);
 	int r;
 	uint32_t i, j, nblock;
 	char *blk;
@@ -428,6 +471,7 @@ dir_lookup(struct File *dir, const char *name, struct File **file)
 				return 0;
 			}
 	}
+    dprintk("exit\n");
 	return -E_NOT_FOUND;
 }
 
@@ -480,6 +524,7 @@ skip_slash(const char *p)
 static int
 walk_path(const char *path, struct File **pdir, struct File **pf, char *lastelem)
 {
+    dprintk("walk_path: %s", path);
 	const char *p;
 	char name[MAXNAMELEN];
 	struct File *dir, *f;
@@ -552,6 +597,7 @@ file_create(const char *path, struct File **pf)
 int
 file_open(const char *path, struct File **pf)
 {
+    dprintk("path: %s", path);
 	return walk_path(path, 0, pf, 0);
 }
 
