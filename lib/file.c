@@ -41,7 +41,24 @@ open(const char *path, int mode)
 	// If any step fails, use fd_close to free the file descriptor.
 
 	// LAB 5: Your code here.
-	panic("open() unimplemented!");
+    int r;
+    struct Fd *fd;
+    
+    if ((r = fd_alloc(&fd)) < 0) {
+        goto out;
+    }
+    if ((r = fsipc_open(path, mode, fd)) < 0) {
+        goto out;
+    }
+    if ((r = fmap(fd, 0, fd->fd_file.file.f_size)) < 0) {
+        goto map_fail;
+    }
+    return 0;
+    
+ map_fail:
+    file_close(fd);
+ out:
+    return r;
 }
 
 // Clean up a file-server file descriptor.
@@ -54,7 +71,10 @@ file_close(struct Fd *fd)
 	// (to free up its resources).
 
 	// LAB 5: Your code here.
-	panic("close() unimplemented!");
+    funmap(fd, fd->fd_file.file.f_size, 0, 1);
+    fsipc_close(fd->fd_file.id);
+    fd_close(fd, 1);
+    return 0;
 }
 
 // Read 'n' bytes from 'fd' at the current seek position into 'buf'.
@@ -172,7 +192,22 @@ fmap(struct Fd* fd, off_t oldsize, off_t newsize)
 	// an error occurs.
 
 	// LAB 5: Your code here.
-	panic("fmap not implemented");
+    if (oldsize >= newsize) {
+        return 0;
+    }
+    for (i = ROUNDUP(oldsize, PGSIZE); i < newsize; i += PGSIZE) {
+        if ((r = fsipc_map(fd->fd_file.id, i, fd2data(fd) + i)) < 0) {
+            goto out;
+        }
+    }
+    return 0;
+
+ out:
+    while (i >= ROUNDUP(oldsize, PGSIZE)) {
+        sys_page_unmap(0, (void *) i);
+        i -= PGSIZE;
+    }
+    return r;
 }
 
 // Unmap any file pages that no longer represent valid file pages
@@ -184,6 +219,7 @@ funmap(struct Fd* fd, off_t oldsize, off_t newsize, bool dirty)
 	size_t i;
 	char *va;
 	int r, ret;
+    pte_t pte;
 
 	// For each page that needs to be unmapped, notify the server if
 	// the page is dirty and remove the page.
@@ -191,7 +227,16 @@ funmap(struct Fd* fd, off_t oldsize, off_t newsize, bool dirty)
 	// Hint: Use vpt to check if a page need to be unmapped.
 	
 	// LAB 5: Your code here.
-	panic("funmap not implemented");
+    if (newsize >= oldsize)
+        return 0;
+    for (i = ROUNDUP(newsize, PGSIZE); i < oldsize; i += PGSIZE) {
+        pte = vpt[(uint32_t) (fd2data(fd) + i) / PGSIZE];
+        if (dirty && (pte & PTE_D)) {
+            fsipc_dirty(fd->fd_file.id, i);
+        }
+        sys_page_unmap(0, fd2data(fd) + i);
+    }
+    return 0;
 }
 
 // Delete a file

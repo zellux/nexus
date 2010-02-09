@@ -66,10 +66,10 @@ fsipc_map(int fileid, off_t offset, void *dstva)
     req->req_fileid = fileid;
     req->req_offset = offset;
     r = fsipc(FSREQ_MAP, (void *) req, dstva, &perm);
-    if ((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P))
-        panic("fsipc_map return illegal permissions");
     if (r < 0)
         return r;
+    if ((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P))
+        panic("fsipc_map return illegal permissions");
 	
 	return 0;
 }

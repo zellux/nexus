@@ -215,6 +215,7 @@ serve_map(envid_t envid, struct Fsreq_map *rq)
     if (o->o_mode)
         perm |= PTE_W;
     ipc_send(envid, r, blk, perm);
+    return;
     
  out:
 	ipc_send(envid, r, 0, 0);
