@@ -471,7 +471,6 @@ dir_lookup(struct File *dir, const char *name, struct File **file)
 				return 0;
 			}
 	}
-    dprintk("exit\n");
 	return -E_NOT_FOUND;
 }
 

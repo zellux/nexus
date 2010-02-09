@@ -108,7 +108,7 @@ serve_open(envid_t envid, struct Fsreq_open *rq)
 	// Open the file
 	if ((r = file_open(path, &f)) < 0) {
 		if (debug)
-			cprintf("file_open failed: %e", r);
+			cprintf("file_open failed: %e\n", r);
 		goto out;
 	}
 
@@ -295,9 +295,11 @@ serve(void)
 	while (1) {
 		perm = 0;
 		req = ipc_recv((int32_t *) &whom, (void *) REQVA, &perm);
-		if (debug)
+		if (debug) {
+            cprintf("vpt=%p UVPT=%p\n", vpt, UVPT);
 			cprintf("fs req %d from %08x [page %08x: %s]\n",
 				req, whom, vpt[VPN(REQVA)], REQVA);
+        }
 
 		// All requests must contain an argument page
 		if (!(perm & PTE_P)) {

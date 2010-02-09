@@ -44,9 +44,16 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 {
 	// LAB 4: Your code here.
     int ret;
-    
+
+    cprintf("[IPC] send from %08x to %08x, value=%d, pg=%p\n",
+            sys_getenvid(), to_env, val, pg);
     while (1) {
-        ret = sys_ipc_try_send(to_env, val, pg, perm);
+        if (pg == NULL) {
+            /* TODO: allow pg=0 */
+            ret = sys_ipc_try_send(to_env, val, (void *) -1, 0);
+        } else {
+            ret = sys_ipc_try_send(to_env, val, pg, perm);
+        }
         if (ret == 0 || ret == 1)
             break;
         if (ret != -E_IPC_NOT_RECV)

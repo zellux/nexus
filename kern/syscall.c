@@ -387,9 +387,11 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
     struct Env *e;
     uintptr_t srcvaddr;
     struct Page *srcpp, *dstpp;
+    pte_t *srcpte, *dstpte;
+    int r;
 
-    if (envid2env(envid, &e, 0)) {
-        return -E_BAD_ENV;
+    if ((r = envid2env(envid, &e, 0)) < 0) {
+        return r;
     }
 
     if (!e->env_ipc_recving) {
@@ -406,7 +408,14 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
         if (user_mem_check(curenv, srcva, PGSIZE, PTE_P|PTE_U))
             return -E_INVAL;
         /* TODO: what if the receiver don't assume a page transfer? */
-        sys_page_map(0, srcva, envid, e->env_ipc_dstva, perm);
+        dprintk("[IPC] [%08x]<%08x> mapping to [%08x]<%08x>\n",
+                curenv->env_id, srcva, envid, e->env_ipc_dstva);
+        if ((srcpp = page_lookup(curenv->env_pgdir, srcva, &srcpte)) == 0) {
+            dprintk("sys_ipc_try_send: 0x%08x is not mapped in src env.\n", srcva);
+            return -E_INVAL;
+        }
+        page_insert(e->env_pgdir, srcpp, e->env_ipc_dstva, perm);
+        /* dump_va_mapping(e->env_pgdir, (uintptr_t) e->env_ipc_dstva); */
         e->env_ipc_perm = perm;
     } else {
         e->env_ipc_perm = 0;

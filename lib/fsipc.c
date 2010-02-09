@@ -35,7 +35,8 @@ fsipc_open(const char *path, int omode, struct Fd *fd)
 	int perm;
 	struct Fsreq_open *req;
 
-	req = (struct Fsreq_open*)fsipcbuf;
+    cprintf("fsipc_open: fs=%p\n", fd);
+	req = (struct Fsreq_open*) fsipcbuf;
 	if (strlen(path) >= MAXPATHLEN)
 		return -E_BAD_PATH;
 	strcpy(req->req_path, path);

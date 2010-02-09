@@ -315,13 +315,8 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
         /*         ph->p_va, ph->p_filesz, ph->p_memsz); */
         segment_alloc(e, (void *) ph->p_va, ph->p_memsz);
         lcr3(e->env_cr3);
-        if (ph->p_filesz >= ph->p_memsz) {
-            memmove((void *) ph->p_va, &binary[ph->p_offset], ph->p_memsz);
-        } else {
-            memset((void *) ph->p_va, 0, ph->p_memsz);
-        }
-        /* if (ph->p_va == 0x00800020) */
-        /*     MAGIC_BREAK; */
+        memset((void *) ph->p_va, 0, ph->p_memsz);
+        memmove((void *) ph->p_va, &binary[ph->p_offset], ph->p_filesz);
         ph ++;
     }
     lcr3(boot_cr3);
