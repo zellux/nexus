@@ -61,7 +61,14 @@ fsipc_map(int fileid, off_t offset, void *dstva)
 	// returned page are at least PTE_U and PTE_P.
 
 	// LAB 5: Your code here.
-	panic("fsipc_map not implemented");
+    req = (struct Fsreq_map *) fsipcbuf;
+    req->req_fileid = fileid;
+    req->req_offset = offset;
+    r = fsipc(FSREQ_MAP, (void *) req, dstva, &perm);
+    if ((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P))
+        panic("fsipc_map return illegal permissions");
+    if (r < 0)
+        return r;
 	
 	return 0;
 }
@@ -97,7 +104,10 @@ fsipc_dirty(int fileid, off_t offset)
 	struct Fsreq_dirty *req;
 	
 	// LAB 5: Your code here.
-	panic("fsipc_dirty not implemented");
+    req = (struct Fsreq_dirty *) fsipcbuf;
+    req->req_fileid = fileid;
+    req->req_offset = offset;
+    return fsipc(FSREQ_DIRTY, (void *) req, 0, 0);
 }
 
 // Ask the file server to delete a file, given its pathname.

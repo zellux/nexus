@@ -9,7 +9,7 @@
 #include "fs.h"
 
 
-#define debug 0
+#define debug 1
 
 struct OpenFile {
 	uint32_t o_fileid;	// file id
@@ -206,7 +206,18 @@ serve_map(envid_t envid, struct Fsreq_map *rq)
 	// (see the O_ flags in inc/lib.h).
 	
 	// LAB 5: Your code here.
-	panic("serve_map not implemented");
+    if ((r = openfile_lookup(envid, rq->req_fileid, &o)) < 0)
+        goto out;
+    r = file_get_block(o->o_file, rq->req_offset / BLKSIZE, &blk);
+    if (r < 0)
+        goto out;
+    perm = PTE_U | PTE_SHARE | PTE_P;
+    if (o->o_mode)
+        perm |= PTE_W;
+    ipc_send(envid, r, blk, perm);
+    
+ out:
+	ipc_send(envid, r, 0, 0);
 }
 
 void
@@ -257,8 +268,15 @@ serve_dirty(envid_t envid, struct Fsreq_dirty *rq)
 	// Find the file and dirty the file at the requested offset.
 	// Send the return value back using ipc_send.
 	// LAB 5: Your code here.
-	panic("serve_dirty not implemented");
+    if ((r = openfile_lookup(envid, rq->req_fileid, &o)) < 0) {
+        goto out;
+    }
+    if ((r = file_dirty(o->o_file, rq->req_offset / BLKSIZE)) < 0) {
+        goto out;
+    }
 
+ out:
+    ipc_send(envid, r, 0, 0);
 }
 
 void

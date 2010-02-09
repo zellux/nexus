@@ -18,10 +18,11 @@ int32_t
 ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 {
 	// LAB 4: Your code here.
-    if (pg)
+    if (pg) {
         sys_ipc_recv(pg);
-    else
+    } else {
         sys_ipc_recv((void *) -1);
+    }
     /* cprintf("[IPC] from %08x to %08x\n", env->env_ipc_from, env->env_id); */
     if (from_env_store)
         *from_env_store = env->env_ipc_from;

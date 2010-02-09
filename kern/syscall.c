@@ -406,11 +406,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
         if (user_mem_check(curenv, srcva, PGSIZE, PTE_P|PTE_U))
             return -E_INVAL;
         /* TODO: what if the receiver don't assume a page transfer? */
-        if (sys_page_alloc(envid, e->env_ipc_dstva, PTE_U|PTE_W|PTE_P))
-            return -E_NO_MEM;
-        srcpp = page_lookup(curenv->env_pgdir, srcva, 0);
-        dstpp = page_lookup(e->env_pgdir, e->env_ipc_dstva, 0);
-        memmove((void *) page2kva(dstpp), (const void *) page2kva(srcpp), PGSIZE);
+        sys_page_map(0, srcva, envid, e->env_ipc_dstva, perm);
         e->env_ipc_perm = perm;
     } else {
         e->env_ipc_perm = 0;
@@ -451,7 +447,7 @@ sys_ipc_recv(void *dstva)
     curenv->env_ipc_recving = 1;
     curenv->env_status = ENV_NOT_RUNNABLE;
     sched_yield();
-    
+
 	return 0;
 }
 
