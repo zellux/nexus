@@ -35,6 +35,9 @@ umain(void)
 	if (n < 0)
 		panic("read /newmotd: %e", n);
 
+    __asm__("xchg %%bx, %%bx": :);                              
 	close(rfd);
+    __asm__("xchg %%bx, %%bx": :);                              
 	close(wfd);
+    __asm__("xchg %%bx, %%bx": :);              
 }

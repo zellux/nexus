@@ -1,6 +1,10 @@
 // User-level IPC library routines
 
 #include <inc/lib.h>
+
+#define dprintk(_f, _a...)
+/* #define dprintk(_f, _a...) cprintf(_f, ##_a) */
+
 // Receive a value via IPC and return it.
 // If 'pg' is nonnull, then any page sent by the sender will be mapped at
 //	that address.
@@ -23,7 +27,7 @@ ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
     } else {
         sys_ipc_recv((void *) -1);
     }
-    cprintf("[IPC] from %08x to %08x\n", env->env_ipc_from, env->env_id);
+    dprintk("[IPC] from %08x to %08x\n", env->env_ipc_from, env->env_id);
     if (from_env_store)
         *from_env_store = env->env_ipc_from;
     if (perm_store)
@@ -45,7 +49,7 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 	// LAB 4: Your code here.
     int ret;
 
-    cprintf("[IPC] send from %08x to %08x, value=%d, pg=%p, perm=%x\n",
+    dprintk("[IPC] send from %08x to %08x, value=%d, pg=%p, perm=%x\n",
             sys_getenvid(), to_env, val, pg, perm);
     while (1) {
         if (pg == NULL) {

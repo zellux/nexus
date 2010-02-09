@@ -2,7 +2,7 @@
 #include <inc/string.h>
 #include <inc/lib.h>
 
-#define debug 0
+#define debug 1
 
 static int file_close(struct Fd *fd);
 static ssize_t file_read(struct Fd *fd, void *buf, size_t n, off_t offset);
@@ -48,16 +48,20 @@ open(const char *path, int mode)
         goto out;
     }
     if ((r = fsipc_open(path, mode, fd)) < 0) {
-        goto out;
+        goto clean_fd;
     }
     if ((r = fmap(fd, 0, fd->fd_file.file.f_size)) < 0) {
-        goto map_fail;
+        goto clean_fd;
     }
-    return 0;
+    if (debug)
+        cprintf("open: allocated fd %p\n", fd);
+    return fd2num(fd);
     
- map_fail:
+ clean_fd:
     file_close(fd);
  out:
+    if (debug)
+        cprintf("open: allocating fd failed %p\n", fd);
     return r;
 }
 
