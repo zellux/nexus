@@ -139,36 +139,22 @@ fork(void)
     envid_t envid;
     uint32_t addr;
     int ptx, i, j;
-    int *vpt, *vpd;
 
     dprintk("[FORK] Setting pgfault handler for env[%x]\n", env->env_id);
     set_pgfault_handler(pgfault);
     envid = sys_exofork();
 
-    /* dprintk("[FORK] UVTP=%p, env_cr3=%p\n", UVPT, env->env_cr3); */
-    /* addr = (PDX(UVPT) << PDXSHIFT) | (PDX(UVPT) << PTXSHIFT); */
-    /* dprintk("[FORK] UVPT[PDX(UVPT)]=%p, PDX=%d, PTX=%d\n", addr, PDX(addr), */
-    /*         PTX(addr)); */
-    /* sys_debug_va_mapping(addr); */
-    /* sys_debug_va_mapping(0); */
-
     if (envid != 0) {
-        vpd = (int *) (PDX(UVPT) << PDXSHIFT | PDX(UVPT) << PTXSHIFT);
         for (i = 0; i < PDX(UTOP); i++) {
             if (!(vpd[i] & PTE_P))
                 continue;
         
             addr = (PDX(UVPT) << PDXSHIFT) | (i << PTXSHIFT);
-            vpt = (int *) addr;
-            assert(i == PTX(addr));
-            /* dprintk("[FORK] &vpd[i]=%p\n", &vpd[i]); */
-            /* dprintk("[FORK] addr=%p, PDX=%d, PTX=%d\n", vpt, PDX(addr), PTX(addr)); */
-            /* sys_debug_va_mapping((uint32_t) vpt); */
             for (j = 0; j < NPTENTRIES; j++) {
                 /* Skip exeption stack page */
                 if (i == PDX(UXSTACKTOP-PGSIZE) && j == PTX(UXSTACKTOP-PGSIZE))
                     continue;
-                if (vpt[j] & PTE_P) {
+                if (vpt[i * NPTENTRIES + j] & PTE_P) {
                     duppage(envid, i * NPTENTRIES + j);
                 }
             }
