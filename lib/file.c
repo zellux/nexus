@@ -2,7 +2,7 @@
 #include <inc/string.h>
 #include <inc/lib.h>
 
-#define debug 1
+#define debug 0
 
 static int file_close(struct Fd *fd);
 static ssize_t file_read(struct Fd *fd, void *buf, size_t n, off_t offset);
@@ -77,7 +77,6 @@ file_close(struct Fd *fd)
 	// LAB 5: Your code here.
     funmap(fd, fd->fd_file.file.f_size, 0, 1);
     fsipc_close(fd->fd_file.id);
-    fd_close(fd, 1);
     return 0;
 }
 
@@ -207,6 +206,7 @@ fmap(struct Fd* fd, off_t oldsize, off_t newsize)
     return 0;
 
  out:
+    /* Rollback */
     while (i >= ROUNDUP(oldsize, PGSIZE)) {
         sys_page_unmap(0, (void *) i);
         i -= PGSIZE;
@@ -237,6 +237,10 @@ funmap(struct Fd* fd, off_t oldsize, off_t newsize, bool dirty)
         pte = vpt[(uint32_t) (fd2data(fd) + i) / PGSIZE];
         if (dirty && (pte & PTE_D)) {
             fsipc_dirty(fd->fd_file.id, i);
+        }
+        if (debug) {
+            cprintf("fd=%p unmapping %p\n", fd, fd2data(fd) + i);
+            __asm__("xchg %%bx, %%bx": :);
         }
         sys_page_unmap(0, fd2data(fd) + i);
     }

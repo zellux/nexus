@@ -5,6 +5,7 @@
 #include <inc/memlayout.h>
 
 #define DEBUG 1
+#define DEBUG_SCHED 0
 
 #if DEBUG == 1
 #define MAGIC_BREAK                                                 \

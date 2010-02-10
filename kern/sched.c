@@ -5,6 +5,11 @@
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
 
+#ifndef DEBUG_SCHED
+#undef dprintk(_f, _a...)
+#define dprintk(_f, _a...)
+#endif
+
 
 // Choose a user environment to run and run it.
 void

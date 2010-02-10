@@ -89,7 +89,6 @@ sys_env_destroy(envid_t envid)
 static void
 sys_yield(void)
 {
-    MAGIC_BREAK;
 	sched_yield();
 }
 
@@ -336,6 +335,7 @@ sys_page_unmap(envid_t envid, void *va)
     if ((ret = envid2env(envid, &e, 1)))
         return ret;
 
+    dprintk("sys_page_unmap: page %08x\n", va);
     vaddr = (uintptr_t) va;
     if ((vaddr >= UTOP) || (vaddr % PGSIZE != 0)) {
         return -E_INVAL;
@@ -408,8 +408,8 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
         if (user_mem_check(curenv, srcva, PGSIZE, PTE_P|PTE_U))
             return -E_INVAL;
         /* TODO: what if the receiver don't assume a page transfer? */
-        dprintk("[IPC] [%08x]<%08x> mapping to [%08x]<%08x>\n",
-                curenv->env_id, srcva, envid, e->env_ipc_dstva);
+        /* dprintk("[IPC] [%08x]<%08x> mapping to [%08x]<%08x>\n", */
+        /*         curenv->env_id, srcva, envid, e->env_ipc_dstva); */
         if ((srcpp = page_lookup(curenv->env_pgdir, srcva, &srcpte)) == 0) {
             dprintk("sys_ipc_try_send: 0x%08x is not mapped in src env.\n", srcva);
             return -E_INVAL;
@@ -420,7 +420,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
     } else {
         e->env_ipc_perm = 0;
     }
-    dprintk("[IPC] [%08x] send %d to [%08x]\n", curenv->env_id, value, envid);
+    /* dprintk("[IPC] [%08x] send %d to [%08x]\n", curenv->env_id, value, envid); */
     e->env_ipc_recving = 0;
     e->env_ipc_from = curenv->env_id;
     e->env_ipc_value = value;
