@@ -2,7 +2,8 @@
 
 #include "fs.h"
 
-#define dprintk(_f, _a...) cprintf("%s[%d] " _f "\n", __FUNCTION__, __LINE__, ##_a)
+#define dprintk(_f, _a...)
+/* #define dprintk(_f, _a...) cprintf("%s[%d] " _f "\n", __FUNCTION__, __LINE__, ##_a) */
 
 struct Super *super;		// superblock
 uint32_t *bitmap;		// bitmap blocks mapped in memory

@@ -303,6 +303,7 @@ tf_handler_default(struct Trapframe *tf)
     }
     
 	if (tf->tf_cs == GD_KT) {
+        print_trapframe(tf);
 		panic("unhandled trap in kernel");
 		env_destroy(curenv);
     } else {

@@ -429,6 +429,7 @@ env_pop_tf(struct Trapframe *tf)
     /* dump_tf(tf); */
     /* dump_va_mapping((pde_t *) KADDR(curenv->env_cr3), tf->tf_eip); */
     /* MAGIC_BREAK; */
+
 	__asm __volatile("movl %0,%%esp\n"
 		"\tpopal\n"
 		"\tpopl %%es\n"

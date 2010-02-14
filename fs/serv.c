@@ -9,7 +9,7 @@
 #include "fs.h"
 
 
-#define debug 1
+#define debug 0
 
 struct OpenFile {
 	uint32_t o_fileid;	// file id

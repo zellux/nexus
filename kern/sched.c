@@ -4,12 +4,12 @@
 #include <kern/pmap.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
+#include <kern/trap.h>
 
-#ifndef DEBUG_SCHED
-#undef dprintk(_f, _a...)
+#if defined(DEBUG_SCHED)
+#undef dprintk
 #define dprintk(_f, _a...)
 #endif
-
 
 // Choose a user environment to run and run it.
 void

@@ -13,6 +13,11 @@
 #include <kern/sched.h>
 #include <kern/kdebug.h>
 
+#if defined(DEBUG_SYSCALL)
+#undef dprintk
+#define dprintk(_f, _a...)
+#endif
+
 char *syscall_names[] = {
 	"cputs",
 	"cgetc",
@@ -167,8 +172,12 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
     if ((ret = envid2env(envid, &e, 1)))
         return ret;
     e->env_tf = *tf;
-    e->env_tf.tf_cs = GD_UT;
-    e->env_tf.tf_eflags |= FL_IF | FL_IOPL_MASK;
+    e->env_tf.tf_cs = GD_UT | 3;
+    e->env_tf.tf_ds = GD_UD | 3;
+    e->env_tf.tf_es = GD_UD | 3;
+    e->env_tf.tf_ss = GD_UD | 3;
+    e->env_tf.tf_eflags |= FL_IF|FL_IOPL_MASK;
+    return 0;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -342,7 +351,7 @@ sys_page_unmap(envid_t envid, void *va)
     if ((ret = envid2env(envid, &e, 1)))
         return ret;
 
-    dprintk("sys_page_unmap: page %08x\n", va);
+    /* dprintk("[SYSCALL] sys_page_unmap: page %08x\n", va); */
     vaddr = (uintptr_t) va;
     if ((vaddr >= UTOP) || (vaddr % PGSIZE != 0)) {
         return -E_INVAL;
@@ -548,6 +557,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_ipc_recv((void *) a1);
     case SYS_ipc_try_send:
         return sys_ipc_try_send(a1, a2, (void *) a3, a4);
+    case SYS_env_set_trapframe:
+        return sys_env_set_trapframe(a1, (struct Trapframe *) a2);
     }
     
 	panic("syscall not implemented");
@@ -566,6 +577,7 @@ do_sysenter(struct Trapframe *tf)
 	curenv->env_tf.tf_ss = GD_UD | 3;
 	curenv->env_tf.tf_cs = GD_UT | 3;
     curenv->env_tf.tf_esp = tf->tf_regs.reg_ebp;
+
 
     a5ptr = (int *) curenv->env_tf.tf_esp;
     user_mem_assert(curenv, (const void *) a5ptr, 4, PTE_U);
