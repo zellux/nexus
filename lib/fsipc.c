@@ -35,7 +35,8 @@ fsipc_open(const char *path, int omode, struct Fd *fd)
 	int perm;
 	struct Fsreq_open *req;
 
-	req = (struct Fsreq_open*)fsipcbuf;
+    cprintf("fsipc_open: fs=%p\n", fd);
+	req = (struct Fsreq_open*) fsipcbuf;
 	if (strlen(path) >= MAXPATHLEN)
 		return -E_BAD_PATH;
 	strcpy(req->req_path, path);
@@ -61,7 +62,14 @@ fsipc_map(int fileid, off_t offset, void *dstva)
 	// returned page are at least PTE_U and PTE_P.
 
 	// LAB 5: Your code here.
-	panic("fsipc_map not implemented");
+    req = (struct Fsreq_map *) fsipcbuf;
+    req->req_fileid = fileid;
+    req->req_offset = offset;
+    r = fsipc(FSREQ_MAP, (void *) req, dstva, &perm);
+    if (r < 0)
+        return r;
+    if ((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P))
+        panic("fsipc_map return illegal permissions");
 	
 	return 0;
 }
@@ -97,7 +105,10 @@ fsipc_dirty(int fileid, off_t offset)
 	struct Fsreq_dirty *req;
 	
 	// LAB 5: Your code here.
-	panic("fsipc_dirty not implemented");
+    req = (struct Fsreq_dirty *) fsipcbuf;
+    req->req_fileid = fileid;
+    req->req_offset = offset;
+    return fsipc(FSREQ_DIRTY, (void *) req, 0, 0);
 }
 
 // Ask the file server to delete a file, given its pathname.

@@ -2,6 +2,9 @@
 
 #include "fs.h"
 
+#define dprintk(_f, _a...)
+/* #define dprintk(_f, _a...) cprintf("%s[%d] " _f "\n", __FUNCTION__, __LINE__, ##_a) */
+
 struct Super *super;		// superblock
 uint32_t *bitmap;		// bitmap blocks mapped in memory
 
@@ -53,6 +56,7 @@ map_block(uint32_t blockno)
 {
 	if (block_is_mapped(blockno))
 		return 0;
+    dprintk("blockno %d\n", blockno);
 	return sys_page_alloc(0, diskaddr(blockno), PTE_U|PTE_P|PTE_W);
 }
 
@@ -75,7 +79,17 @@ read_block(uint32_t blockno, char **blk)
 		panic("reading free block %08x\n", blockno);
 
 	// LAB 5: Your code here.
-	panic("read_block not implemented");
+    if (!block_is_mapped(blockno)) {
+        if ((r = map_block(blockno)))
+            return r;
+    }
+    addr = diskaddr(blockno);
+    ide_read(blockno * BLKSECTS, (void *) addr, BLKSECTS);
+    dprintk("addr = %p\n", addr);
+    if (blk) {
+        *blk = addr;
+    }
+    
 	return 0;
 }
 
@@ -93,7 +107,9 @@ write_block(uint32_t blockno)
 	
 	// Write the disk block and clear PTE_D.
 	// LAB 5: Your code here.
-	panic("write_block not implemented");
+    addr = diskaddr(blockno);
+    ide_write(blockno * BLKSECTS, (const void *) addr, BLKSECTS);
+    sys_page_map(0, (void *) addr, 0, (void *) addr, PTE_USER);
 }
 
 // Make sure this block is unmapped.
@@ -142,8 +158,25 @@ int
 alloc_block_num(void)
 {
 	// LAB 5: Your code here.
-	panic("alloc_block_num not implemented");
-	return -E_NO_DISK;
+    int i, bitnum;
+
+    for (i = 0; i < super->s_nblocks; i += 32)
+        if (bitmap[i / 32] != 0)
+            break;
+    /* TODO: Here we give up the last several disk pages */
+    if (i >= super->s_nblocks)
+        return -E_NO_DISK;
+    /* TODO: Improving performance by using clz instruction */
+    for (bitnum = 0; bitnum < 32; bitnum++) {
+        if (bitmap[i / 32] & (1 << bitnum)) {
+            dprintk("blkid<%d> is free.\n", i + bitnum);
+            bitmap[i / 32] &= ~(1 << bitnum);
+            write_block(2 + i / BLKBITSIZE);
+            return i + bitnum;
+        }
+    }
+    assert("oops, why can't I find a free block?");
+    return 0;
 }
 
 // Allocate a block -- first find a free block in the bitmap,
@@ -160,9 +193,13 @@ alloc_block(void)
 
 	// LAB 5: Your code here.
 	int r, bno;
-
-	panic("alloc_block not implemented");
-	return -E_NO_DISK;
+    
+    bno = alloc_block_num();
+    if ((r = map_block(bno))) {
+        free_block(bno);
+        return r;
+    }
+    return bno;
 }
 
 // Read and validate the file system super-block.
@@ -253,7 +290,7 @@ fs_init(void)
 		ide_set_disk(1);
 	else
 		ide_set_disk(0);
-	
+
 	read_super();
 	check_write_block();
 	read_bitmap();
@@ -278,7 +315,7 @@ fs_init(void)
 int
 file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool alloc)
 {
-	int r;
+	int r, clear;
 	uint32_t *ptr;
 	char *blk;
 
@@ -286,8 +323,35 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 	// for easier bookkeeping.
 	// Hint: Use read_block for accessing the indirect block
 	// LAB 5: Your code here.
-	panic("file_block_walk not implemented");
-	
+    if (filebno >= NINDIRECT) {
+        return -E_INVAL;
+    }
+    if (filebno < NDIRECT) {
+        *ppdiskbno = &f->f_direct[filebno];
+        return 0;
+    }
+    clear = 0;
+    if (!f->f_indirect) {
+        /* Indirect block has not been allocated yet */
+        if (!alloc) {
+            return -E_NOT_FOUND;
+        }
+        r = alloc_block();
+        if (r == -E_NO_MEM)
+            return r;
+        f->f_indirect = r;
+        clear = 1;
+    }
+    r = read_block(f->f_indirect, &blk);
+    if (r) {
+        return r;
+    }
+    ptr = (uint32_t *) blk;
+    *ppdiskbno = &ptr[filebno];
+    if (clear) {
+        /* The pointer in indirect block is uninitialized */
+        ptr[filebno] = 0;
+    }
 	return 0;
 }
 
@@ -303,14 +367,26 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 int
 file_map_block(struct File *f, uint32_t filebno, uint32_t *diskbno, bool alloc)
 {
-	
-
 	int r;
 	uint32_t *ptr;
 
-	// LAB 5: Your code here. 
-	panic("file_map_block not implemented");
-
+	// LAB 5: Your code here.
+    r = file_block_walk(f, filebno, &ptr, alloc);
+    if (r) {
+        return r;
+    }
+    if (*ptr == 0) {
+        r = alloc_block();
+        if (r == -E_NO_DISK)
+            return r;
+        *ptr = r;
+    }
+    if ((r = map_block(*ptr))) {
+        return r;
+    }
+    
+    *diskbno = *ptr;
+    
 	return 0;
 }
 
@@ -343,7 +419,12 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 	// Read in the block, leaving the pointer in *blk.
 	// Hint: Use file_map_block and read_block.
 	// LAB 5: Your code here.
-	panic("file_get_block not implemented");
+    r = file_map_block(f, filebno, &diskbno, 1);
+    dprintk("file %s, filebno %d, diskbno %d\n", f->f_name, filebno, diskbno);
+    if (r) {
+        return r;
+    }
+    read_block(diskbno, blk);
 	
 	return 0;
 }
@@ -359,7 +440,8 @@ file_dirty(struct File *f, off_t offset)
 	// it with PTE_D set.
 	// Hint: Use file_get_block
 	// LAB 5: Your code here.
-	panic("file_dirty not implemented");
+    file_get_block(f, offset / BLKSIZE, &blk);
+    ((unsigned char *volatile) blk)[0] = blk[0];
 
 	return 0;
 }
@@ -368,6 +450,7 @@ file_dirty(struct File *f, off_t offset)
 int
 dir_lookup(struct File *dir, const char *name, struct File **file)
 {
+    dprintk("name: %s", name);
 	int r;
 	uint32_t i, j, nblock;
 	char *blk;
@@ -441,6 +524,7 @@ skip_slash(const char *p)
 static int
 walk_path(const char *path, struct File **pdir, struct File **pf, char *lastelem)
 {
+    dprintk("walk_path: %s", path);
 	const char *p;
 	char name[MAXNAMELEN];
 	struct File *dir, *f;
@@ -513,6 +597,7 @@ file_create(const char *path, struct File **pf)
 int
 file_open(const char *path, struct File **pf)
 {
+    dprintk("path: %s", path);
 	return walk_path(path, 0, pf, 0);
 }
 

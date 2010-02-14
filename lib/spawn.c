@@ -66,10 +66,12 @@ spawn(const char *prog, const char **argv)
 	}
 	close(fd);
 	fd = -1;
-	
+
+    cprintf("sys_env_set_trapframe\n");
 	if ((r = sys_env_set_trapframe(child, &child_tf)) < 0)
 		panic("sys_env_set_trapframe: %e", r);
 	
+    cprintf("sys_env_set_status\n");
 	if ((r = sys_env_set_status(child, ENV_RUNNABLE)) < 0)
 		panic("sys_env_set_status: %e", r);
 	

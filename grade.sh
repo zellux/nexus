@@ -102,12 +102,12 @@ runqemu() {
 	[ "$preservefs" = y ] || rm -f obj/fs/fs.img
 	if $verbose
 	then
-		echo "gmake $2... "
+		echo "make $2... "
 	fi
-	gmake $2 >$out
+	make $2 >$out
 	if [ $? -ne 0 ]
 	then
-		echo gmake $2 failed 
+		echo make $2 failed 
 		exit 1
 	fi
 
@@ -153,7 +153,7 @@ score=0
 # Reset the file system to its original, pristine state
 resetfs() {
 	rm -f obj/fs/fs.img
-	gmake obj/fs/fs.img >$out
+	make obj/fs/fs.img >$out
 }
 
 http_port=`rand`
@@ -165,6 +165,7 @@ score=0
 pts=85
 preservefs=n
 runtestq -tag 'tcp echo server [tcpsrv]' tcpsrv
+
 
 #pts=15 # points are allocated in the test code
 preservefs=n

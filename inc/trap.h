@@ -83,6 +83,12 @@ struct UTrapframe {
 	uintptr_t utf_esp;
 };
 
+typedef void (*traphandler_t)(struct Trapframe *);
+
+extern int32_t do_sysenter(struct Trapframe *tf);
+
+#define MAGIC_BLANK 0x12345678
+
 #endif /* !__ASSEMBLER__ */
 
 // Must equal 'sizeof(struct Trapframe)'.

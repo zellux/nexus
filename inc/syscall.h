@@ -19,6 +19,7 @@ enum
 	SYS_ipc_try_send,
 	SYS_ipc_recv,
 	SYS_time_msec,
+    SYS_debug_va_mapping,
 	NSYSCALLS
 };
 

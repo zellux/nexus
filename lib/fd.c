@@ -15,6 +15,24 @@
 #define INDEX2DATA(i)	((char*) (FILEBASE + (i)*PTSIZE))
 
 
+/* Debugging routines */
+void
+dump_fdtable()
+{
+    int i;
+    struct Fd *fd = NULL, *fd2 = NULL;
+
+    if (!debug) return;
+
+    cprintf("===fd table===\n");
+    for (i = 0; i < MAXFD; i++) {
+        fd_lookup(i, &fd);
+        fd_lookup(fd2num(fd), &fd2);
+        cprintf("%d\t%d\t%p\t%p\n", i, fd2num(fd), fd2);
+    }
+    __asm__("xchg %%bx, %%bx": :);              
+}
+
 /********************************
  * FILE DESCRIPTOR MANIPULATORS *
  *                              *
@@ -73,12 +91,12 @@ fd_lookup(int fdnum, struct Fd **fd_store)
 {
 	struct Fd *fd;
 		
+	fd = INDEX2FD(fdnum);
 	if (fdnum < 0 || fdnum >= MAXFD) {
 		if (debug)
 			cprintf("[%08x] bad fd %d\n", env->env_id, fd);
 		return -E_INVAL;
 	}
-	fd = INDEX2FD(fdnum);
 	if (!(vpd[PDX(fd)] & PTE_P) || !(vpt[VPN(fd)] & PTE_P)) {
 		if (debug)
 			cprintf("[%08x] closed fd %d\n", env->env_id, fd);
@@ -154,6 +172,7 @@ void
 close_all(void)
 {
 	int i;
+    dump_fdtable();
 	for (i = 0; i < MAXFD; i++)
 		close(i);
 }

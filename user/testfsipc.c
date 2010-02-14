@@ -20,6 +20,7 @@ umain(void)
 	int fileid;
 	struct Fd *fd;
 
+    cprintf("msg=%s\n", msg);
 	if ((r = fsipc_open("/not-found", O_RDONLY, FVA)) < 0 && r != -E_NOT_FOUND)
 		panic("serve_open /not-found: %e", r);
 	else if (r == 0)
@@ -28,6 +29,7 @@ umain(void)
 	if ((r = fsipc_open("/newmotd", O_RDONLY, FVA)) < 0)
 		panic("serve_open /newmotd: %e", r);
 	fd = (struct Fd*) FVA;
+    cprintf("fd=%p msg=%s\n", fd, msg);
 	if (strlen(msg) != fd->fd_file.file.f_size)
 		panic("serve_open returned size %d wanted %d\n", fd->fd_file.file.f_size, strlen(msg));
 	cprintf("serve_open is good\n");

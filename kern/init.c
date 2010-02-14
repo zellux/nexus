@@ -14,7 +14,7 @@
 #include <kern/picirq.h>
 #include <kern/time.h>
 #include <dev/pci.h>
-
+#include <kern/kdebug.h>
 
 void
 i386_init(void)
@@ -40,12 +40,13 @@ i386_init(void)
 	// Lab 3 user environment initialization functions
 	env_init();
 	idt_init();
+    msr_init();
 
 	// Lab 4 multitasking initialization functions
 	pic_init();
 	kclock_init();
 	time_init();
-	pci_enabled = pci_init();
+	/* pci_enabled = pci_init(); */
 
 	// Should always have an idle process as first one.
 	ENV_CREATE(user_idle);
@@ -63,14 +64,11 @@ i386_init(void)
 	ENV_CREATE2(TEST, TESTSIZE);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_primes);
+	ENV_CREATE(user_icode);
 #endif // TEST*
-
 
 	// Schedule and run the first user environment!
 	sched_yield();
-
-
 }
 
 
@@ -116,4 +114,16 @@ _warn(const char *file, int line, const char *fmt,...)
 	vcprintf(fmt, ap);
 	cprintf("\n");
 	va_end(ap);
+}
+
+void
+msr_init()
+{
+    extern void sysenter_handler();
+
+    wrmsr(0x174, GD_KT, 0);
+    wrmsr(0x175, KSTACKTOP, 0);
+    wrmsr(0x176, sysenter_handler, 0);
+
+    dump_msr();
 }

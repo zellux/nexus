@@ -70,7 +70,8 @@ PERL	:= perl
 # -fno-builtin is required to avoid refs to undefined functions in the kernel.
 # Only optimize to -O1 to discourage inlining, which complicates backtraces.
 CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O1 -fno-builtin -I$(TOP) -MD 
-CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gstabs -m32
+# CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gstabs -m32
+CFLAGS += -Wall -Wno-format -Wno-unused -Werror -g -m32
 
 CFLAGS += -I$(TOP)/net/lwip/include
 CFLAGS += -I$(TOP)/net/lwip/include/ipv4
