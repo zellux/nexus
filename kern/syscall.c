@@ -172,8 +172,9 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
     struct Env *e;
     int ret;
 
-    if ((ret = envid2env(envid, &e, 1)))
+    if ((ret = envid2env(envid, &e, 1)) < 0)
         return ret;
+    user_mem_assert(curenv, tf, 4, PTE_U);
     e->env_tf = *tf;
     e->env_tf.tf_cs = GD_UT | 3;
     e->env_tf.tf_ds = GD_UD | 3;
