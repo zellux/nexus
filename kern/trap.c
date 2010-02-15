@@ -328,6 +328,7 @@ irq_handler_clock(struct Trapframe *tf)
     if (tf->tf_cs == GD_KT) {
         panic("Timer interrupt at kernel");
     }
+    time_tick();
     sched_yield();
 }
 
