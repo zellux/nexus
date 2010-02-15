@@ -25,6 +25,7 @@ int32_t
 ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 {
 	// LAB 4: Your code here.
+    dprintk("[IPC] %08x waiting...\n", env->env_id);
     if (pg) {
         sys_ipc_recv(pg);
     } else {

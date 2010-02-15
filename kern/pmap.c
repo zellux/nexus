@@ -790,11 +790,17 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 // If it cannot, 'env' is destroyed.
 //
 void
-user_mem_assert(struct Env *env, const void *va, size_t len, int perm)
+user_mem_assert(struct Env *env, const void *va, size_t len, int perm, char *from)
 {
 	if (user_mem_check(env, va, len, perm | PTE_U) < 0) {
-		cprintf("[%08x] user_mem_check assertion failure for "
-			"va %08x\n", curenv->env_id, user_mem_check_addr);
+        if (from == NULL) {
+            cprintf("[%08x] user_mem_check assertion failure for "
+                    "va %08x\n", curenv->env_id, user_mem_check_addr);
+        } else {
+            cprintf("[%08x] %s user_mem_check assertion failure for "
+                    "va %08x\n", curenv->env_id, from, user_mem_check_addr);
+        }
+            
 		env_destroy(env);	// may not return
 	}
 }

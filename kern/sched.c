@@ -26,6 +26,11 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
     struct Env *e;
+    /* static int count; */
+
+    /* count ++; */
+    /* if ((count == 100) || (count == 1000)) */
+    /*     print_trapframe(&curenv->env_tf); */
 
     if (curenv == NULL)
         curenv = &envs[0];
@@ -46,9 +51,10 @@ sched_yield(void)
         }
     }
 
+    /* FIXME: a strange bug occurs when there is a single busy waiting process */
 	// Run the special idle environment when nothing else is runnable.
 	if (envs[0].env_status == ENV_RUNNABLE) {
-        dprintk("Scheduler: have nothing to run but idle\n");
+        cprintf("Scheduler: have nothing to run but idle\n");
 		env_run(&envs[0]);
 	} else {
 		cprintf("Destroyed all environments - nothing more to do!\n");

@@ -9,6 +9,7 @@ umain(void)
 	cprintf("icode startup\n");
 
 	cprintf("icode: open /motd\n");
+    while (1);
 	if ((fd = open("/motd", O_RDONLY)) < 0)
 		panic("icode: open /motd: %e", fd);
 

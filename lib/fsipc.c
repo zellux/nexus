@@ -1,7 +1,11 @@
 #include <inc/fs.h>
 #include <inc/lib.h>
+#include <inc/debug.h>
 
-#define debug 0
+#if defined(DEBUG_FS) && DEBUG_FS == 0
+#undef dprintk
+#define dprintk(_f, _a...)
+#endif
 
 extern uint8_t fsipcbuf[PGSIZE];	// page-aligned, declared in entry.S
 
@@ -17,8 +21,7 @@ fsipc(unsigned type, void *fsreq, void *dstva, int *perm)
 {
 	envid_t whom;
 
-	if (debug)
-		cprintf("[%08x] fsipc %d %08x\n", env->env_id, type, fsipcbuf);
+    dprintk("[%08x] fsipc %d %08x\n", env->env_id, type, fsipcbuf);
 
 	ipc_send(envs[1].env_id, type, fsreq, PTE_P | PTE_W | PTE_U);
 	return ipc_recv(&whom, dstva, perm);
@@ -35,7 +38,7 @@ fsipc_open(const char *path, int omode, struct Fd *fd)
 	int perm;
 	struct Fsreq_open *req;
 
-    cprintf("fsipc_open: fs=%p\n", fd);
+    dprintk("fsipc_open: fs=%p\n", fd);
 	req = (struct Fsreq_open*) fsipcbuf;
 	if (strlen(path) >= MAXPATHLEN)
 		return -E_BAD_PATH;

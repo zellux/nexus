@@ -74,6 +74,7 @@ idt_init(void)
 	
 	// LAB 3: Your code here.
     extern void trap_divide();
+    extern void trap_debug();
     extern void trap_syscall();
     extern void trap_gpflt();
     extern void trap_pgflt();
@@ -81,11 +82,12 @@ idt_init(void)
     extern void irq_clock();
 
     SETGATE(idt[0], 0, GD_KT, trap_divide, 3);
-    SETGATE(idt[3], 1, GD_KT, trap_brkpt, 3);
+    SETGATE(idt[1], 0, GD_KT, trap_debug, 3);
+    SETGATE(idt[3], 0, GD_KT, trap_brkpt, 3);
     SETGATE(idt[13], 0, GD_KT, trap_gpflt, 0);
     SETGATE(idt[14], 0, GD_KT, trap_pgflt, 0);
     SETGATE(idt[32], 0, GD_KT, irq_clock, 0);
-    SETGATE(idt[48], 1, GD_KT, trap_syscall, 3);
+    SETGATE(idt[48], 0, GD_KT, trap_syscall, 3);
 
     for (i = 0; i < 256; i++) {
         idt_handlers[i] = tf_handler_default;
@@ -222,15 +224,14 @@ page_fault_handler(struct Trapframe *tf)
 	// Read processor's CR2 register to find the faulting address
 	fault_va = rcr2();
 
-	cprintf("[%08x] user fault va %08x ip %08x\n",
-            curenv->env_id, fault_va, tf->tf_eip);
-    /* print_trapframe(tf); */
-
 	// Handle kernel-mode page faults.
     if (tf->tf_cs == GD_KT) {
-        dump_va_mapping(curenv->env_pgdir, fault_va);
+        print_trapframe(tf);
         panic("page fault at kernel mode");
     }
+
+	cprintf("[%08x] user fault va %08x ip %08x\n",
+            curenv->env_id, fault_va, tf->tf_eip);
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
@@ -277,8 +278,10 @@ page_fault_handler(struct Trapframe *tf)
         curenv->env_tf.tf_esp = UXSTACKTOP - sizeof(struct UTrapframe);
     }
 
-    user_mem_assert(curenv, curenv->env_pgfault_upcall, 4, PTE_U);
-    user_mem_assert(curenv, (void *) (curenv->env_tf.tf_esp - 4), PGSIZE, PTE_U);
+    user_mem_assert(curenv, curenv->env_pgfault_upcall, 4, 
+                    PTE_U, "pgfault-handler");
+    user_mem_assert(curenv, (void *) (curenv->env_tf.tf_esp - 4),
+                    PGSIZE, PTE_U, "pgfault-stack");
     /* MAGIC_BREAK; */
 
     utf = (struct UTrapframe *) curenv->env_tf.tf_esp;
@@ -306,8 +309,8 @@ tf_handler_default(struct Trapframe *tf)
         return;
     }
     
+    print_trapframe(tf);
 	if (tf->tf_cs == GD_KT) {
-        print_trapframe(tf);
 		panic("unhandled trap in kernel");
 		env_destroy(curenv);
     } else {

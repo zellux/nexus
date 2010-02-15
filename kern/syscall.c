@@ -47,7 +47,7 @@ sys_cputs(const char *s, size_t len)
 {
 	// Check that the user has permission to read memory [s, s+len).
 	// Destroy the environment if not.
-    user_mem_assert(curenv, s, len, PTE_U);
+    user_mem_assert(curenv, s, len, PTE_U, "sys_cputs");
 
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
@@ -174,7 +174,7 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 
     if ((ret = envid2env(envid, &e, 1)) < 0)
         return ret;
-    user_mem_assert(curenv, tf, 4, PTE_U);
+    user_mem_assert(curenv, tf, 4, PTE_U, "sys_env_set_trapframe");
     e->env_tf = *tf;
     e->env_tf.tf_cs = GD_UT | 3;
     e->env_tf.tf_ds = GD_UD | 3;
@@ -567,7 +567,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     case SYS_ipc_try_send:
         return sys_ipc_try_send(a1, a2, (void *) a3, a4);
     case SYS_time_msec:
-        return sys_env_set_trapframe(a1, (struct Trapframe *) a2);
+        return sys_time_msec();
     case SYS_env_set_trapframe:
         return sys_env_set_trapframe(a1, (struct Trapframe *) a2);
     }
@@ -591,7 +591,7 @@ do_sysenter(struct Trapframe *tf)
 
 
     a5ptr = (int *) curenv->env_tf.tf_esp;
-    user_mem_assert(curenv, (const void *) a5ptr, 4, PTE_U);
+    user_mem_assert(curenv, (const void *) a5ptr, 4, PTE_U, "sysenter-esp");
     /* print_trapframe(&curenv->env_tf); */
     
     /* MAGIC_BREAK; */
