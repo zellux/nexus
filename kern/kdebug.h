@@ -3,28 +3,8 @@
 
 #include <inc/types.h>
 #include <inc/memlayout.h>
+#include <inc/debug.h>
 
-#define DEBUG 1
-#define DEBUG_SCHED 0
-#define DEBUG_SYSCALL 0
-
-#if DEBUG == 1
-#define MAGIC_BREAK                                                 \
-    do {                                                            \
-        cprintf("Magic break at %s[%d]\n", __FUNCTION__, __LINE__); \
-        __asm__("xchg %%bx, %%bx": :);                              \
-    } while (0)
-#else
-#define MAGIC_BREAK
-#endif
-
-#if DEBUG == 1
-#define dprintk(_f, _a...) cprintf(_f, ## _a)
-#else
-#define dprintk(_f, _a...)
-#endif
-
-#define dprintfunc() dprintk("%s [%d]\n", __FUNCTION__, __LINE__)
 
 struct Trapframe;
 

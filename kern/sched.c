@@ -6,7 +6,7 @@
 #include <kern/kdebug.h>
 #include <kern/trap.h>
 
-#if defined(DEBUG_SCHED)
+#if defined(DEBUG_SCHED) && DEBUG_SCHED == 0
 #undef dprintk
 #define dprintk(_f, _a...)
 #endif

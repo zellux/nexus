@@ -1,9 +1,12 @@
 // User-level IPC library routines
 
 #include <inc/lib.h>
+#include <inc/debug.h>
 
+#if defined(DEBUG_IPC) && DEBUG_IPC == 0
+#undef dprintk
 #define dprintk(_f, _a...)
-/* #define dprintk(_f, _a...) cprintf(_f, ##_a) */
+#endif
 
 // Receive a value via IPC and return it.
 // If 'pg' is nonnull, then any page sent by the sender will be mapped at
